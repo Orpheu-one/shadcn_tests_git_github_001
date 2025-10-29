@@ -99,7 +99,7 @@ const TotalVendas = () => {
       
       <XAxis dataKey="name" />
       <YAxis />
-      <Tooltip />
+      <Tooltip contentStyle={{borderRadius:"10px", border:"1px solid #eee", paddingTop:"0px", margin:"5px"}}/>
       <Legend align="right" verticalAlign="top" wrapperStyle={{paddingBottom:"10px"}}/>
       
       {/* UV line */}
