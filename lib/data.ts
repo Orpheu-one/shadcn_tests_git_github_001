@@ -1,23 +1,23 @@
 // TEMPORARY DATA
 
-export let role = "admin";
+export const role = "admin";
 
-export const teachersData = [
+export const d2d_Data = [
   {
     id: 1,
-    teacherId: "1234567890",
+    d2dId: "AAAA",
     name: "John Doe",
     email: "john@doe.com",
     photo:
       "https://images.pexels.com/photos/2888150/pexels-photo-2888150.jpeg?auto=compress&cs=tinysrgb&w=1200",
-    phone: "1234567890",
+    phone: "ABBB",
     subjects: ["Math", "Geometry"],
     classes: ["1B", "2A", "3C"],
     address: "123 Main St, Anytown, USA",
   },
   {
     id: 2,
-    teacherId: "1234567890",
+    d2dId: "ACCA",
     name: "Jane Doe",
     email: "jane@doe.com",
     photo:
@@ -29,7 +29,7 @@ export const teachersData = [
   },
   {
     id: 3,
-    teacherId: "1234567890",
+    d2dId: "ADDA",
     name: "Mike Geller",
     email: "mike@geller.com",
     photo:
@@ -41,7 +41,7 @@ export const teachersData = [
   },
   {
     id: 4,
-    teacherId: "1234567890",
+    d2dId: "AEEA",
     name: "Jay French",
     email: "jay@gmail.com",
     photo:
@@ -53,7 +53,7 @@ export const teachersData = [
   },
   {
     id: 5,
-    teacherId: "1234567890",
+    d2dId: "AFFA",
     name: "Jane Smith",
     email: "jane@gmail.com",
     photo:
@@ -65,7 +65,7 @@ export const teachersData = [
   },
   {
     id: 6,
-    teacherId: "1234567890",
+    d2dId: "AGGA",
     name: "Anna Santiago",
     email: "anna@gmail.com",
     photo:
@@ -77,7 +77,7 @@ export const teachersData = [
   },
   {
     id: 7,
-    teacherId: "1234567890",
+    d2dId: "AHHA",
     name: "Allen Black",
     email: "allen@black.com",
     photo:
@@ -89,7 +89,7 @@ export const teachersData = [
   },
   {
     id: 8,
-    teacherId: "1234567890",
+    d2dId: "AIIA",
     name: "Ophelia Castro",
     email: "ophelia@castro.com",
     photo:
@@ -99,151 +99,108 @@ export const teachersData = [
     classes: ["5A", "4B", "3C"],
     address: "123 Main St, Anytown, USA",
   },
-  {
-    id: 9,
-    teacherId: "1234567890",
-    name: "Derek Briggs",
-    email: "derek@briggs.com",
-    photo:
-      "https://images.pexels.com/photos/842980/pexels-photo-842980.jpeg?auto=compress&cs=tinysrgb&w=1200",
-    phone: "1234567890",
-    subjects: ["Literature", "English"],
-    classes: ["5A", "4B", "3C"],
-    address: "123 Main St, Anytown, USA",
-  },
-  {
-    id: 10,
-    teacherId: "1234567890",
-    name: "John Glover",
-    email: "john@glover.com",
-    photo:
-      "https://images.pexels.com/photos/1043474/pexels-photo-1043474.jpeg?auto=compress&cs=tinysrgb&w=1200",
-    phone: "1234567890",
-    subjects: ["Biology"],
-    classes: ["5A", "4B", "3C"],
-    address: "123 Main St, Anytown, USA",
-  },
+
 ];
 
-export const studentsData = [
+export const operador_Data = [
   {
     id: 1,
-    studentId: "1234567890",
+    operadorId: "1234567890",
     name: "John Doe",
     email: "john@doe.com",
     photo:
       "https://images.pexels.com/photos/2888150/pexels-photo-2888150.jpeg?auto=compress&cs=tinysrgb&w=1200",
     phone: "1234567890",
-    grade: 5,
-    class: "1B",
     address: "123 Main St, Anytown, USA",
   },
   {
     id: 2,
-    studentId: "1234567890",
+    operadorId: "1234567890",
     name: "Jane Doe",
     email: "jane@doe.com",
     photo:
       "https://images.pexels.com/photos/936126/pexels-photo-936126.jpeg?auto=compress&cs=tinysrgb&w=1200",
     phone: "1234567890",
-    grade: 5,
-    class: "5A",
     address: "123 Main St, Anytown, USA",
   },
   {
     id: 3,
-    studentId: "1234567890",
+   operadorId: "1234567890",
     name: "Mike Geller",
     email: "mike@geller.com",
     photo:
       "https://images.pexels.com/photos/428328/pexels-photo-428328.jpeg?auto=compress&cs=tinysrgb&w=1200",
     phone: "1234567890",
-    grade: 5,
-    class: "5A",
     address: "123 Main St, Anytown, USA",
   },
   {
     id: 4,
-    studentId: "1234567890",
+    operadorId: "1234567890",
     name: "Jay French",
     email: "jay@gmail.com",
     photo:
       "https://images.pexels.com/photos/1187765/pexels-photo-1187765.jpeg?auto=compress&cs=tinysrgb&w=1200",
     phone: "1234567890",
-    grade: 5,
-    class: "5A",
     address: "123 Main St, Anytown, USA",
   },
   {
     id: 5,
-    studentId: "1234567890",
+    operadorId: "1234567890",
     name: "Jane Smith",
     email: "jane@gmail.com",
     photo:
       "https://images.pexels.com/photos/1102341/pexels-photo-1102341.jpeg?auto=compress&cs=tinysrgb&w=1200",
     phone: "1234567890",
-    grade: 5,
-    class: "5A",
     address: "123 Main St, Anytown, USA",
   },
   {
     id: 6,
-    studentId: "1234567890",
+    operadorId: "1234567890",
     name: "Anna Santiago",
     email: "anna@gmail.com",
     photo:
       "https://images.pexels.com/photos/712513/pexels-photo-712513.jpeg?auto=compress&cs=tinysrgb&w=1200",
     phone: "1234567890",
-    grade: 5,
-    class: "5A",
     address: "123 Main St, Anytown, USA",
   },
   {
     id: 7,
-    studentId: "1234567890",
+   operadorId: "1234567890",
     name: "Allen Black",
     email: "allen@black.com",
     photo:
       "https://images.pexels.com/photos/1438081/pexels-photo-1438081.jpeg?auto=compress&cs=tinysrgb&w=1200",
     phone: "1234567890",
-    grade: 5,
-    class: "5A",
     address: "123 Main St, Anytown, USA",
   },
   {
     id: 8,
-    studentId: "1234567890",
+   operadorId: "1234567890",
     name: "Ophelia Castro",
     email: "ophelia@castro.com",
     photo:
       "https://images.pexels.com/photos/1036623/pexels-photo-1036623.jpeg?auto=compress&cs=tinysrgb&w=1200",
     phone: "1234567890",
-    grade: 5,
-    class: "5A",
     address: "123 Main St, Anytown, USA",
   },
   {
     id: 9,
-    studentId: "1234567890",
+    operadorId: "1234567890",
     name: "Derek Briggs",
     email: "derek@briggs.com",
     photo:
       "https://images.pexels.com/photos/842980/pexels-photo-842980.jpeg?auto=compress&cs=tinysrgb&w=1200",
     phone: "1234567890",
-    grade: 5,
-    class: "5A",
     address: "123 Main St, Anytown, USA",
   },
   {
     id: 10,
-    studentId: "1234567890",
+    operadorId: "1234567890",
     name: "John Glover",
     email: "john@glover.com",
     photo:
       "https://images.pexels.com/photos/1043474/pexels-photo-1043474.jpeg?auto=compress&cs=tinysrgb&w=1200",
     phone: "1234567890",
-    grade: 5,
-    class: "5A",
     address: "123 Main St, Anytown, USA",
   },
 ];
@@ -1001,20 +958,20 @@ export const calendarEvents = [
   {
     title: "History",
     allDay: false,
-    start: new Date(2025, 10, 28, 14, 0),
-    end: new Date(2025, 10, 28, 14, 45),
+    start: new Date(2025, 10, 16, 14, 0),
+    end: new Date(2025, 10, 16, 14, 45),
   },
   {
     title: "English",
     allDay: false,
-    start: new Date(2025, 10, 28, 9, 0),
-    end: new Date(2025, 10, 28, 9, 45),
+    start: new Date(2025, 10, 28, 18, 0),
+    end: new Date(2025, 10, 28, 18, 45),
   },
   {
     title: "Biology",
     allDay: false,
-    start: new Date(2025, 10, 28, 10, 0),
-    end: new Date(2025, 10, 28, 10, 45),
+    start: new Date(2025, 10, 28, 16, 0),
+    end: new Date(2025, 10, 28, 16, 45),
   },
   {
     title: "Physics",
@@ -1032,32 +989,32 @@ export const calendarEvents = [
   {
     title: "Math",
     allDay: false,
-    start: new Date(2025, 10, 28, 8, 0),
-    end: new Date(2025, 10, 28, 8, 45),
+    start: new Date(2025, 9, 28, 8, 0),
+    end: new Date(2025, 9 , 28, 8, 45),
   },
   {
     title: "English",
     allDay: false,
-    start: new Date(2025, 10, 29, 9, 0),
-    end: new Date(2025, 10, 29, 9, 45),
+    start: new Date(2025, 9, 29, 15, 0),
+    end: new Date(2025, 9, 29, 15, 45),
   },
 
   {
     title: "Physics",
     allDay: false,
-    start: new Date(2025, 10, 29, 11, 0),
-    end: new Date(2025, 10, 29, 11, 45),
+    start: new Date(2025, 9, 29, 11, 0),
+    end: new Date(2025, 9, 29, 11, 45),
   },
   {
     title: "Chemistry",
     allDay: false,
-    start: new Date(2025, 10, 30, 13, 0),
-    end: new Date(2025, 10, 30, 13, 45),
+    start: new Date(2025, 9, 30, 13, 0),
+    end: new Date(2025, 9, 30, 13, 45),
   },
   {
     title: "History",
     allDay: false,
-    start: new Date(2025, 10, 31, 14, 0),
-    end: new Date(2025, 10, 31, 14, 45),
+    start: new Date(2025, 9, 31, 14, 0),
+    end: new Date(2025, 9, 31, 14, 45),
   },
 ];

@@ -23,11 +23,12 @@ const BigCalendar = () => {
       startAccessor="start"
       endAccessor="end"
       style={{ height: "100%", width: "100%" }}
-      views={{ month: false, week: true, day: true, agenda: false }}
       view={view}
       onView={handleViewChange}
-      min={new Date(2025,1,0,10,0,0) }
-      max={new Date(2025,1,0,20,0,0) }
+      views={{ month: false, week: true, day: true, agenda: false }}
+      min={new Date(0, 0, 0, 10, 0, 0)}   // 10:00
+      max={new Date(0, 0, 0, 20, 0, 0)}   // 20:00
+
     />
 
   )

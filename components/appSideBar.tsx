@@ -32,6 +32,36 @@ const items = [
     icon: Settings,
     href: "/settings"
   },
+   {
+    title: "item 0",
+    url: "#",
+    icon: Home,
+    href: "/"
+  },
+  {
+    title: "item 1",
+    url: "#",
+    icon: Inbox,
+    href: "/inbox"
+  },
+  {
+    title: "item 2",
+    url: "#",
+    icon: Calendar,
+    href: "/calendar"
+  },
+  {
+    title: "item 3",
+    url: "#",
+    icon: Search,
+    href: "/search"
+  },
+  {
+    title: "item 4",
+    url: "#",
+    icon: Settings,
+    href: "/settings"
+  },
 ]
 
 
@@ -41,11 +71,11 @@ const AppSideBar = () => {
     <div className=''>
         
         {items.map((item) => (
-            <div key={item.title} className="font-light text-md">
+            <div key={item.title} className="flex items-end-safe font-light text-sm">
                 
 
                 
-                <a href={item.href} className="flex items-center gap-2 py-4 text-white font-light ">
+                <a href={item.href} className="flex gap-2 py-4 text-sm text-white font-light">
                 <Tooltip>
                 <TooltipTrigger asChild>
                 <item.icon />

@@ -46,7 +46,9 @@ const adminPage = () => {
       <div className="w-full flex lg:w-1/3 dark:bg-gray-950 flex-col gap-4 rounded-lg">
         <div className="w-full h-[400px] rounded-lg">
         <EventCalendar />
+        <div className="mt-4">
         <ListaVendas/> 
+        </div>
         </div>
         
       </div>

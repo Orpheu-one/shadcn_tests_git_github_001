@@ -13,10 +13,14 @@ const Navbar = () => {
     <nav className='flex justify-between items-center p-4 bg-gray-200  dark:bg-black dark:text-slate-50'>
       {/*LEFT SIDE*/}
       <div className="flex items-center justify-between flex-row gap-2">
-        <Link href="/" className="flex items-center">
-        <Image src="/connectados_logo_002.png" alt="Logo" width={60} height={60} />
-          <h1 className="hidden lg:block  items-center mx-2 text-2xl ">connectados</h1>
+        <Link href="/" className="flex">
+        <Image src="/connectados_logo_white.png" alt="Logo" width={40} height={40} />
+        <div className="flex flex-col items-center">
+          <h1 className="hidden lg:block  items-top mx-2 mt-2 text-2xl text-white">connectados</h1>
+          
+          </div>
         </Link>
+              
       </div>
       {/*MIDDLE SIDE*/}
       <div className="hidden md:flex items-center justify-left px-12 ring-[1px] ring-white rounded-full">

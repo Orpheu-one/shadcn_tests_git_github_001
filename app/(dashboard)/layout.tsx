@@ -15,11 +15,11 @@ export default function SecLayout({
       
      {/* SIDEMENU  */}
      
-      <div className="w-[15%] md:w-[8%] lg:w-[15%] xl:w-[15%]">
+      <div className="w-[10%] md:w-[8%] lg:w-[10%] xl:w-[10%]">
         <AppSideBar />
      </div>
      
-     <div className="w-[85%] md:w-[92%] lg:w-[85%] xl:w-[85%] flex">
+     <div className="w-[90%] md:w-[92%] lg:w-[90%] xl:w-[90%] flex">
        {children}
      </div>
      
