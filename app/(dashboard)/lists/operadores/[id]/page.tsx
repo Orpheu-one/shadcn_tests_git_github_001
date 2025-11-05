@@ -1,5 +1,5 @@
 import Image from "next/image"
-import { d2d_Data } from "@/lib/data"
+import { operador_Data } from "@/lib/data"
 import BigCalendar from "@/components/BigCalendar"
 import React from "react"
 import Link from "next/link"
@@ -7,12 +7,12 @@ import ListaVendas from "@/components/ListaVendas"
 import RetrievelGraph from "@/components/RetrievelGraph"
 
 
-const { email } = d2d_Data[3]
-const { photo } = d2d_Data[4]
-const { d2dId } = d2d_Data[2]
-const { phone } = d2d_Data[5]
+const { email } = operador_Data[3]
+const { photo } = operador_Data[4]
+const { operadorId } = operador_Data[2]
+const { phone } = operador_Data[5]
 
-const D2dSinglePage = () => (
+const operadorSinglePage = () => (
   <div className="flex-1 p-4 flex flex-col xl:flex-row gap-4">
     {/* LEFT */}
     <div className="w-full xl:w-2/3">
@@ -27,7 +27,7 @@ const D2dSinglePage = () => (
             <h1 className="text-xl font-semibold">John Doe</h1>
             <p className="text-sm text-gray-600">Lorem ipsum dolor sit amet consectetur adipisicing elit. Quisquam, quod.</p>
             <div className="flex mt-2 items-center justify-between gap-2">
-              <h2 className="text-md font-semibold text-gray-800">{d2dId}</h2>
+              <h2 className="text-md font-semibold text-gray-800">{operadorId}</h2>
               <h2 className="text-lg font-bold text-gray-800">TEAM</h2>
             </div>
             <div className="mt-1 space-y-2">
@@ -111,13 +111,12 @@ const D2dSinglePage = () => (
 
 
     </div>
-    <div className="">
-        <ListaVendas /> 
- </div>
+        <ListaVendas/> 
+
     
     
     </div>
   </div>
 )
 
-export default D2dSinglePage
+export default operadorSinglePage

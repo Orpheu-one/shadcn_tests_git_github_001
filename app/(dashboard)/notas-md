@@ -1,0 +1,5 @@
+
+//  Link de lista p singlepage/id in d2d[id] and operador[id]
+
+    # <Link href={`/lists/operadores/${item.id}`}>
+

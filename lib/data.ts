@@ -205,7 +205,7 @@ export const operador_Data = [
   },
 ];
 
-export const parentsData = [
+export const supervisor_Data = [
   {
     id: 1,
     name: "John Doe",
@@ -288,7 +288,7 @@ export const parentsData = [
   },
 ];
 
-export const subjectsData = [
+export const venda_Tipo_Data = [
   {
     id: 1,
     name: "Math",
@@ -341,7 +341,7 @@ export const subjectsData = [
   },
 ];
 
-export const classesData = [
+export const team_Data = [
   {
     id: 1,
     name: "1A",
@@ -414,7 +414,7 @@ export const classesData = [
   },
 ];
 
-export const lessonsData = [
+export const vendas_Data = [
   {
     id: 1,
     subject: "Math",
@@ -550,7 +550,7 @@ export const examsData = [
   },
 ];
 
-export const assignmentsData = [
+export const projectos_Data = [
   {
     id: 1,
     subject: "Math",
@@ -623,7 +623,7 @@ export const assignmentsData = [
   },
 ];
 
-export const resultsData = [
+export const resultados_Data = [
   {
     id: 1,
     subject: "Math",
@@ -726,7 +726,7 @@ export const resultsData = [
   },
 ];
 
-export const eventsData = [
+export const callbacks_Data = [
   {
     id: 1,
     title: "Lake Trip",

@@ -1,5 +1,6 @@
 "use client"
 
+import FormModal from "@/components/FormModal"
 import Pagination from "@/components/Pagination"
 import Table from "@/components/Table"
 import TableSearch from "@/components/TableSearch"
@@ -67,18 +68,14 @@ const renderRow = (item:d2d)=>(
         <td className=""> 
             <div className="flex items-center gap-2">
             <Link href={`/lists/d2d/${item.id}`}>
-                    <button className="w-7 h-7 px-2 items-center rounded-full bg-yellow-500">
-                        <Image src="/view.png" alt="" width={16} height={16} />
-                    </button>
+                    <FormModal table="d2d" type="edit" data={item} id={item.id} />
             </Link>
 
 
             <Link href={`/lists/d2d/${item.id}`}>
                 {role === "admin" && (
-                    
-                    <button className="w-7 h-7 px-2 items-center rounded-full bg-red-500">
-                        <Image src="/delete.png" alt="" width={16} height={16}/>
-                    </button>
+
+                <FormModal table="d2d" type="delete" data={item} id={item.id} />
 
                     )}
             </Link>
@@ -101,15 +98,15 @@ const renderRow = (item:d2d)=>(
       <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
         <TableSearch />
         <div className="flex items-center gap-4 self-end">
-          <button className="rounded-full bg-yellow-600 p-2">
+          <button className="rounded-full bg-yellow-300 p-2">
             <Image src="/filter.png" alt="" width={15} height={15} className="" />
           </button>
            <button className="rounded-full bg-purple-500 p-2">
             <Image src="/sort.png" alt="" width={15} height={15} className="" />
           </button>
-          <button className="rounded-full bg-[#e94772b9] p-2">
-            <Image src="/plus.png" alt="" width={15} height={15} className="" />
-          </button>
+
+
+            <FormModal table="d2d" type="create" />
         </div>
         </div>
       </div>

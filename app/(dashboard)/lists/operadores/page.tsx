@@ -1,11 +1,11 @@
 "use client"
 
+import FormModal from "@/components/FormModal"
 import Pagination from "@/components/Pagination"
 import Table from "@/components/Table"
 import TableSearch from "@/components/TableSearch"
 import { operador_Data, role } from "@/lib/data"
 import Image from "next/image"
-import Link from "next/link"
 
 type operador ={
 
@@ -66,22 +66,19 @@ const renderRow = (item:operador)=>(
 
         <td className=""> 
             <div className="flex items-center gap-2">
-            <Link href={`/lists/operadores/${item.id}`}>
-                    <button className="w-7 h-7 px-2 items-center rounded-full bg-yellow-500">
-                        <Image src="/view.png" alt="" width={16} height={16} />
-                    </button>
-            </Link>
+            
+                    <FormModal table="operador" type="edit" />
+            
 
 
-            <Link href={`/lists/operadores/${item.id}`}>
+            
+            
                 {role === "admin" && (
                     
-                    <button className="w-7 h-7 px-2 items-center rounded-full bg-red-500">
-                        <Image src="/delete.png" alt="" width={16} height={16}/>
-                    </button>
+                    <FormModal table="operador" type="delete" id={item.id}/>
 
                     )}
-            </Link>
+           
             
             </div>
 
@@ -107,9 +104,9 @@ const renderRow = (item:operador)=>(
            <button className="rounded-full bg-purple-500 p-2">
             <Image src="/sort.png" alt="" width={15} height={15} className="" />
           </button>
-          <button className="rounded-full bg-[#e94772b9] p-2">
-            <Image src="/plus.png" alt="" width={15} height={15} className="" />
-          </button>
+           {role === "admin" && (
+          <FormModal table="operador" type="create" />
+            )}
         </div>
         </div>
       </div>
