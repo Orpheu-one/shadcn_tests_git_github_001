@@ -67,18 +67,18 @@ const renderRow = (item:d2d)=>(
 
         <td className=""> 
             <div className="flex items-center gap-2">
-            <Link href={`/lists/d2d/${item.id}`}>
+          
                     <FormModal table="d2d" type="edit" data={item} id={item.id} />
-            </Link>
+            
 
 
-            <Link href={`/lists/d2d/${item.id}`}>
+            
                 {role === "admin" && (
 
                 <FormModal table="d2d" type="delete" data={item} id={item.id} />
 
                     )}
-            </Link>
+          
             
             </div>
 

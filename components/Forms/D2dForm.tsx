@@ -14,20 +14,17 @@ const schema = z.object({
   apelido: z.string().min(3, { message: "O apelido tem que ter pelo menos 3 caracteres" }).max(20, { message: "O nome deve ter no maximo 20 caracteres" }),
   phone: z.string().min(8, { message: "Numero de telefone é obrigatorio" }),
   address: z.string().min(15, { message: "A morada é obrigatoria" }),
-  birthday: z.string()
-   .refine((val) => !!isNaN(Date.parse(val)), { message: "Coloca a tua data de nascimento" })
-   .transform((val) => new Date(val)),
+  birthday: z.date({ message: "Coloca a tua data de nascimento" }),
   genero: z.enum(["Masculino", "Feminino", "Prefiro não especificar"], { message: "Escolhe uma opção" }),
   img: z.instanceof(File, { message: "Escolhe uma imagem" }),
 });
 
 type FormValues = z.infer<typeof schema>;
 
-const OperadoresForm = ({ type, data, tableLabel }: { type: "create" | "edit"; data?: unknown; tableLabel: string }) => {
+const D2dForm = ({ type, data, tableLabel }: { type: "create" | "edit"; data?: unknown; tableLabel: string }) => {
   const {
     register,
     handleSubmit,
-    control,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -39,7 +36,7 @@ const OperadoresForm = ({ type, data, tableLabel }: { type: "create" | "edit"; d
 
   React.useEffect(() => {
     const handleResize = () => {
-      const formElement = document.getElementById('operadores-form');
+      const formElement = document.getElementById('d2d-form');
       if (window.innerWidth <= 768 && formElement) {
         formElement.style.overflowY = 'auto';
         formElement.style.maxHeight = '90vh';
@@ -51,7 +48,7 @@ const OperadoresForm = ({ type, data, tableLabel }: { type: "create" | "edit"; d
   }, []);
 
   return (
-    <form id="operadores-form" className="w-full grid grid-cols-1 gap-8 lg:grid-cols-3" onSubmit={onSubmit}>
+    <form id="d2d-form" className="w-full grid grid-cols-1 gap-8 lg:grid-cols-3" onSubmit={onSubmit}>
       <h1 className="text-xl font-semibold text-gray-800 lg:col-span-3">
         {type === "create" ? "Criar um novo" : "Editar"} {tableLabel}
       </h1>
@@ -76,4 +73,4 @@ const OperadoresForm = ({ type, data, tableLabel }: { type: "create" | "edit"; d
   );
 };
 
-export default OperadoresForm;
+export default D2dForm;
