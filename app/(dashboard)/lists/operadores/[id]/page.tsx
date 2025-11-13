@@ -1,18 +1,72 @@
 import Image from "next/image"
-import { operador_Data } from "@/lib/data"
 import BigCalendar from "@/components/BigCalendar"
 import React from "react"
 import Link from "next/link"
 import ListaVendas from "@/components/ListaVendas"
 import RetrievelGraph from "@/components/RetrievelGraph"
+import prisma from "@/lib/prisma";
+// 1. Importar o namespace Prisma, que contém as ferramentas de tipagem (utilities)
+import { Prisma } from "@prisma/client"; 
+import { notFound } from 'next/navigation';
 
 
-const { email } = operador_Data[3]
-const { photo } = operador_Data[4]
-const { operadorId } = operador_Data[2]
-const { phone } = operador_Data[5]
+interface OperadorPageProps {
+  // 'params' contém o segmento dinâmico da URL, neste caso, o [id]
+  params: {
+    id: string;
+  };
+}
 
-const operadorSinglePage = () => (
+// 1. DEFINIÇÃO DO TIPO: Usamos a ferramenta Prisma para saber o que está dentro do objeto.
+type UserWithEvents = Prisma.UserGetPayload<{
+    include: { events: true }; 
+}>;
+
+// 2. FUNÇÃO DE PÁGINA ASSÍNCRONA ÚNICA: Tem de ser 'async' para poder usar 'await'.
+export default async function OperadorPage({ params }: OperadorPageProps) {
+    
+    // Extraímos o ID do URL
+    const { id } = params;
+
+    // Garante que o ID é um número para a query do Prisma
+    const idNumber = parseInt(id, 10);
+
+    // Se o ID não for um número válido, devolvemos 404
+    if (isNaN(idNumber)) {
+        notFound(); 
+    }
+    
+    // --- 3. CONSULTA DOS DADOS ---
+    // A palavra-chave 'await' espera a resposta da base de dados.
+    const operador: UserWithEvents | null = await prisma.user.findUnique({
+        where: { id: idNumber }, // Assumi que o campo é 'id' (Int), em vez de 'userId'
+        include: { events: true }, 
+    });
+
+    // 4. VERIFICAÇÃO DE SEGURANÇA: Se não for encontrado, mostramos um erro.
+    if (!operador) {
+        return (
+            <div className="p-8 text-center bg-red-100 text-red-700 rounded-lg">
+                <p>Erro: Operador com ID "{id}" não encontrado.</p>
+            </div>
+        );
+    }
+    // --- Fim da Lógica de Consulta ---
+
+
+    // 5. DESESTRUTURAÇÃO 
+    const { 
+        email, 
+        avatar, 
+        userId: operadorId, // Criamos a variável 'operadorId'
+        phone,
+        frst_name,
+        lst_name,
+        events 
+    } = operador; 
+
+return (
+
   <div className="flex-1 p-4 flex flex-col xl:flex-row gap-4">
     {/* LEFT */}
     <div className="w-full xl:w-2/3">
@@ -21,7 +75,8 @@ const operadorSinglePage = () => (
         {/* USER INFO CARD */}
         <div className="bg-purple-400 py-6 px-4 rounded-lg flex-1 flex gap-4">
           <div className="w-1/3">
-            <Image src={photo} alt="" width={80} height={80} className="w-36 h-36 rounded-full object-cover" />
+            {/* O seu avatar da DB está aqui: */}
+            <Image src={avatar || 'https://placehold.co/144x144/9333ea/ffffff?text=OP'} alt="" width={80} height={80} className="w-36 h-36 rounded-full object-cover" />
           </div>
           <div className="w-2/3 flex flex-col justify-between gap-4">
             <h1 className="text-xl font-semibold">John Doe</h1>
@@ -118,5 +173,4 @@ const operadorSinglePage = () => (
     </div>
   </div>
 )
-
-export default operadorSinglePage
+} //
