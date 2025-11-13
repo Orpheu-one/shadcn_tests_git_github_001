@@ -1,0 +1,115 @@
+// O teu provedor de base de dados (MySQL/MariaDB)
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// O gerador do Prisma Client
+generator client {
+  provider = "prisma-client-js"
+}
+
+// --- ENUMS ---
+
+// Definicao dos papéis de utilizador
+enum UserRole {
+  OPERATOR  // operador de vendas
+  ADMIN     // administrador
+  D2D       // porta-a-porta (door-to-door)
+  SUPERVISOR // supervisor de equipa
+}
+
+// Definição do tipo de evento
+enum EventType {
+  SALE      // Venda concluída
+  CALLBACK  // Ligação de retorno/Follow-up
+}
+
+// Definição do canal de vendas
+enum EventChannel {
+  REMOTE // Remoto (chamada, online)
+  F2F    // Face-a-face (presencial)
+}
+
+// Definição do status do evento/processo
+enum EventStatus {
+  PROJECT // Em andamento / pipeline
+  CLOSED  // Concluído (seja venda ou callback final)
+  LOST    // Oportunidade perdida / cancelada
+}
+
+// --- MODELOS ---
+
+model User {
+  // Campos obrigatórios (ID, Autenticação, Identidade)
+  id       Int      @id @default(autoincrement())
+  userId   String   @unique // Identificador externo ou legível
+  email    String   @unique
+  pwd      String   // Password (deve ser hashada, mas Prisma armazena a string)
+  
+  // Detalhes Pessoais
+  frst_name String
+  lst_name  String
+  phone     String? // O '?' torna o campo opcional
+  avatar    String?
+  desc      String?
+  
+  // Status e Papéis
+  role      UserRole  @default(OPERATOR)
+  is_active Boolean   @default(true)
+  
+  // Datas
+  created_at DateTime @default(now())
+
+  // RELAÇÕES
+  // Um Utilizador pode ter múltiplos Eventos
+  events Event[]
+}
+
+model Client {
+  // Campos obrigatórios
+  id       Int      @id @default(autoincrement())
+  clientId String   @unique // Identificador externo ou legível
+
+  // Detalhes Pessoais e Contacto
+  frst_name String
+  lst_name  String?
+  phone     String
+  email     String?  @unique // Opcional
+  
+  // Localização
+  address   String
+  lat       Float?  // Latitude
+  long      Float?  // Longitude
+
+  // RELAÇÕES
+  // Um Cliente SÓ PODE ter um Evento (a relação é 1:1, forçada pelo campo 'event' no Event)
+  event Event?
+}
+
+model Event {
+  // Campos obrigatórios
+  id           Int        @id @default(autoincrement())
+  event_id     String     @unique // Identificador externo ou legível
+  
+  // RELAÇÕES (Chaves Estrangeiras)
+  // 1. O Evento pertence a um Utilizador (Muitos para Um)
+  userId       Int
+  user         User       @relation(fields: [userId], references: [id])
+  
+  // 2. O Evento refere-se a um Cliente
+  clientId     Int        @unique // <--- ESTE É O CAMPO CRÍTICO: Garante que um Cliente só aparece aqui UMA VEZ.
+  client       Client     @relation(fields: [clientId], references: [id])
+  
+  // DETALHES DO EVENTO
+  type         EventType    @default(SALE)
+  channel      EventChannel @default(REMOTE)
+  status       EventStatus  @default(PROJECT)
+  obs          String?      // Observações (Opcional)
+
+  // DATAS
+  Scheduled    DateTime? // Data/Hora agendada para o evento (opcional)
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+  calledback_at DateTime? // Hora/Data do último callback, se aplicável (opcional)
+}
