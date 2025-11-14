@@ -6,7 +6,6 @@ import Table from "@/components/Table"
 import TableSearch from "@/components/TableSearch"
 import { d2d_Data, role } from "@/lib/data"
 import Image from "next/image"
-import Link from "next/link"
 
 type d2d ={
 

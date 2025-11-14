@@ -47,7 +47,7 @@ export default async function OperadorPage({ params }: OperadorPageProps) {
     if (!operador) {
         return (
             <div className="p-8 text-center bg-red-100 text-red-700 rounded-lg">
-                <p>Erro: Operador com ID "{id}" não encontrado.</p>
+                <p>Erro: Operador com ID {id} não encontrado.</p>
             </div>
         );
     }
