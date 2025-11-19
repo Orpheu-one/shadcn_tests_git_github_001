@@ -23,7 +23,7 @@ const forms: {
   operador: (t, d, l) => <OperadoresForm type={t} data={d} tableLabel={l!} />,
 };
 
-type TableType = "d2d" | "operador" | "supervisor" | "venda" | "projecto" | "resultado" | "callback";
+type TableType = "d2d" | "operador" | "supervisor" | "events" | "projecto" | "resultado" | "callback";
 type FormType = "create" | "edit" | "delete";
 
 type FormModalProps = {
@@ -43,7 +43,7 @@ const FormModal = ({ table, type, data, id }: FormModalProps) => {
     d2d: "Vendedor",
     operador: "Operador",
     supervisor: "Supervisor",
-    venda: "Venda",
+    events: "Venda",
     projecto: "Projecto",
     resultado: "Resultado",
     callback: "Callback",
