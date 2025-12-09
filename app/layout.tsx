@@ -34,7 +34,7 @@ export default function RootLayout({
         <ThemeProvider>
            
 
-        <main className="w-full bg-">
+        <main className="w-full  dark:bg-gray-900">
 
           <Navbar />
 

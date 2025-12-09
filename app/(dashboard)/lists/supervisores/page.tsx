@@ -2,11 +2,9 @@ import FormModal from "@/components/FormModal"
 import Pagination from "@/components/Pagination"
 import Table from "@/components/Table"
 import TableSearch from "@/components/TableSearch"
-import {role } from "@/lib/data"
-// O prisma deve ser importado corretamente (o caminho pode variar)
+// import { role } from "@/lib/data" // Mantido fora para evitar o erro de importação, usando 'currentUserRole'
 import prisma from "@/lib/prisma" 
 import { ITEMS_PER_PAGE } from "@/lib/settings"
-// Importamos os tipos Prisma necessários
 import { Prisma, User, UserRole } from "@prisma/client" 
 import { SearchParams } from "next/dist/server/request/search-params"
 import Image from "next/image" 
@@ -19,6 +17,10 @@ interface SearchProps {
 type UserWithEvents = Prisma.UserGetPayload<{
     include: { events: true }; 
 }>;
+
+// CORREÇÃO TEMPORÁRIA: Variável para o papel do utilizador atual. 
+// Assumimos que o utilizador é um admin para que os botões de edição apareçam.
+const currentUserRole: 'admin' | 'supervisor' | 'd2d' | 'operator' = 'admin'; 
 
 // Colunas da Tabela
 const columns = [
@@ -35,7 +37,6 @@ const columns = [
         header:"Telefone", accessor:"phone", className:"hidden md:table-cell",
     },
     {
-        // Alterado o header para refletir o conteúdo da coluna
         header:"Nível de Acesso (Role)", accessor:"role", className:"hidden lg:table-cell", 
     },
     {
@@ -44,7 +45,6 @@ const columns = [
 ]
 
 // 2. FUNÇÃO DE RENDERIZAÇÃO DA LINHA
-// Garante que o item é do tipo esperado pelo Prisma (User + Events)
 const renderRow = (item: UserWithEvents)=>(
 
     <tr key={item.id} className="border-b border-gray-500 even:bg-purple-300 hover:bg-purple-500">
@@ -64,17 +64,16 @@ const renderRow = (item: UserWithEvents)=>(
         <td className="table-cell">{item.userId}</td>
         <td className="hidden md:table-cell">{item.frst_name}</td>
         <td className="hidden md:table-cell">{item.phone}</td>
-        {/* A coluna "Role" */}
         <td className="hidden md:table-cell">{item.role}</td> 
 
         <td className=""> 
             <div className="flex items-center gap-2">
-                {/* Botão de Edição */}
-                <FormModal table="operador" type="edit" />
+                {/* Botão de Edição - Passamos userRole="SUPERVISOR" */}
+                <FormModal table="supervisor" type="edit" userRole={UserRole.SUPERVISOR} /> 
             
-                {/* Botão de Eliminar (apenas para Admin) */}
-                {role === "admin" && (
-                    <FormModal table="operador" type="delete" id={item.id}/>
+                {/* Botão de Eliminar (apenas para Admin) - Passamos userRole="SUPERVISOR" */}
+                {currentUserRole === "admin" && (
+                    <FormModal table="supervisor" type="delete" id={item.id} userRole={UserRole.SUPERVISOR} />
                 )}
             </div>
         </td>
@@ -82,17 +81,31 @@ const renderRow = (item: UserWithEvents)=>(
 )
 
 // COMPONENTE PRINCIPAL (SERVER COMPONENT)
-const D2DPage = async ({ searchParams }: SearchProps) => {
-  const {page,...queryParams}= searchParams;
+const SupervisorsPage = async ({ searchParams }: SearchProps) => {
+  const {page, q, ...queryParams}= searchParams; 
 
   const p = page ? parseInt(page as string, 10) : 1;
+  const query = (q as string)?.toLowerCase() || ''; 
+
+  // --- CONSTRUÇÃO DO FILTRO (WHERE) ---
+  const searchFilter = query.length > 0 ? {
+    OR: [
+        { frst_name: { contains: query, mode: 'insensitive' as const } },
+        { lst_name: { contains: query, mode: 'insensitive' as const } },
+        { email: { contains: query, mode: 'insensitive' as const } },
+        { phone: { contains: query, mode: 'insensitive' as const } },
+    ]
+  } : {};
+
+  // O filtro total combina o Role fixo e o filtro de pesquisa dinâmico
+  const combinedWhere = {
+    role: UserRole.SUPERVISOR, // <-- FILTRO APLICADO PARA SUPERVISOR!
+    ...searchFilter,           
+  };
 
     // --- 3. CONSULTA DOS DADOS ---
-    // Consulta APENAS utilizadores onde o role é D2D
-    const d2dAgents: UserWithEvents[] = await prisma.user.findMany({
-        where: {
-            role: UserRole.D2D, // <-- FILTRO APLICADO AQUI!
-        },
+    const supervisors: UserWithEvents[] = await prisma.user.findMany({
+        where: combinedWhere,
         include: {
             events: true, 
         },
@@ -103,24 +116,25 @@ const D2DPage = async ({ searchParams }: SearchProps) => {
         },
     });
 
-    // Conta o número total de utilizadores D2D para a paginação
+    // Conta o número total de utilizadores Supervisor para a paginação
     const count = await prisma.user.count({
-        where: {
-            role: UserRole.D2D, // <-- CONTAGEM FILTRADA TAMBÉM!
-        },
+        where: combinedWhere, // <-- CONTAGEM USA O MESMO FILTRO!
     });  
 
    
 
     // 4. VERIFICAÇÃO (Se a lista estiver vazia)
-    if (d2dAgents.length === 0) {
+    if (supervisors.length === 0) {
         return (
             <div className="p-8 text-center bg-gray-100 text-gray-700 rounded-lg m-4 mt-0">
-                <h2 className="text-xl font-bold">Nenhum Agente D2D Encontrado</h2>
-                <p>Cria o primeiro agente D2D para começar!</p>
-                {role === "admin" && (
+                <h2 className="text-xl font-bold">
+                    {query.length > 0 ? `Nenhum Supervisor encontrado para "${query}"` : "Nenhum Supervisor Encontrado"}
+                </h2>
+                <p>Cria o primeiro Supervisor para começar!</p>
+                {currentUserRole === "admin" && (
                     <div className="mt-4 inline-block">
-                        <FormModal table="operador" type="create" />
+                        {/* Botão de Criação - Passamos userRole="SUPERVISOR" */}
+                        <FormModal table="supervisor" type="create" userRole={UserRole.SUPERVISOR} />
                     </div>
                 )}
             </div>
@@ -134,10 +148,10 @@ const D2DPage = async ({ searchParams }: SearchProps) => {
         <div className=' flex-1 bg-white p-4 rounded-lg m-4 mt-0'>
             {/* TOP */}
             <div className="flex items-center justify-between ">
-                <h1 className="hidden md:block text-lg font-semibold text-black mt-4" >Lista de Agentes Porta-a-Porta (D2D)</h1>
+                <h1 className="hidden md:block text-lg font-semibold text-black mt-4" >Lista de Supervisores</h1>
             
                 <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
-                    <TableSearch />
+                    <TableSearch placeholder="Pesquisar Supervisores..." /> 
                     <div className="flex items-center gap-4 self-end">
                         <button className="rounded-full items-center justify-content bg-yellow-600 p-2 hover:bg-yellow-700 transition duration-150">
                             <Image src="/filter.png" alt="Filtro" width={15} height={15} className="" />
@@ -145,8 +159,9 @@ const D2DPage = async ({ searchParams }: SearchProps) => {
                         <button className="rounded-full items-center justify-content bg-purple-500 p-2 hover:bg-purple-600 transition duration-150">
                             <Image src="/sort.png" alt="Ordenar" width={15} height={15} className="" />
                         </button>
-                        {role === "admin" && (
-                            <FormModal table="operador" type="create" />
+                        {currentUserRole === "admin" && (
+                            // Botão de Criação - Passamos userRole="SUPERVISOR"
+                            <FormModal table="supervisor" type="create" userRole={UserRole.SUPERVISOR} />
                         )}
                     </div>
                 </div>
@@ -154,7 +169,7 @@ const D2DPage = async ({ searchParams }: SearchProps) => {
             
             {/* LISTA */}
             <div className="text-black overflow-x-auto">
-                <Table columns={columns} renderRow={renderRow} data={d2dAgents} />
+                <Table columns={columns} renderRow={renderRow} data={supervisors} />
             </div>
             
             {/* PAGINATION */}
@@ -165,4 +180,4 @@ const D2DPage = async ({ searchParams }: SearchProps) => {
     )
 }
 
-export default D2DPage;
+export default SupervisorsPage;

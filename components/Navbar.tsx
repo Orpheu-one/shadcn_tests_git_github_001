@@ -10,7 +10,7 @@ const Navbar = () => {
   return (
 
 
-    <nav className='flex justify-between items-center p-4 bg-gray-200  dark:bg-black dark:text-slate-50'>
+    <nav className='flex justify-between items-center px-4 py-2 bg-gray-200  dark:bg-gray-900 dark:text-slate-50'>
       {/*LEFT SIDE*/}
       <div className="flex items-center justify-between flex-row gap-2">
         <Link href="/" className="flex">

@@ -1,38 +1,71 @@
-import { UseFormRegister, FieldError } from "react-hook-form"; // ← 1. import the real type
+// components/InputField.tsx
+// Componente de input genérico que suporta <input> ou <textarea>.
 
-type InputFieldProps = {
+import { UseFormRegister, FieldError, FieldValues } from "react-hook-form";
+import React from 'react';
+
+// Define a interface para o componente InputField, agora genérica
+type InputFieldProps<TFieldValues extends FieldValues> = {
   label: string;
   type?: string;
-  register: UseFormRegister<any>; // ← 2. stop using unknown, but keep the prop name
-  username: string;               // ← your original prop, untouched
+  register: UseFormRegister<TFieldValues>;
+  username?: string; 
   name: string;
   defaultValue?: string;
   error?: FieldError;
-  inputProps: React.InputHTMLAttributes<HTMLInputElement>;
+  // Suporta props de <input> OU <textarea>
+  inputProps: React.InputHTMLAttributes<HTMLInputElement> | React.TextareaHTMLAttributes<HTMLTextAreaElement>;
+  
+  // NOVAS PROPS: Para o campo de observações (textarea)
+  isTextArea?: boolean;
+  rows?: number; 
 };
 
-const InputField = ({
+// O componente usa tipagem genérica para ser compatível com React Hook Form
+const InputField = <TFieldValues extends FieldValues>({
   label,
   type = "text",
   register,
-  username, // ← you keep it even if you don’t use it inside
+  username, 
   name,
   defaultValue,
   error,
   inputProps,
-}: InputFieldProps) => {
-  return (
-    <div className="w-full flex flex-col gap-2 ">
-      <label className="text-xs text-gray-700">{label}</label>
+  isTextArea = false, 
+  rows = 3,           
+}: InputFieldProps<TFieldValues>) => {
+    
+  // Classes Tailwind CSS partilhadas
+  const commonClasses = "w-full grid border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 resize-none bg-transparent";
 
-      <input
-        type={type}
-        placeholder={name}
-        {...register(name)} // ← 3. just pass the string, not an object
-        className="w-full grid border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300"
-        {...inputProps}
-        defaultValue={defaultValue}
-      />
+  return (
+    <div className="w-full flex flex-col gap-2">
+      <label htmlFor={name} className="text-xs text-gray-700">{label}</label>
+
+      {/* RENDERIZAÇÃO CONDICIONAL */}
+      {isTextArea ? (
+        // Se isTextArea for true, renderiza <textarea>
+        <textarea
+          id={name}
+          rows={rows}
+          placeholder={label} 
+          className={commonClasses}
+          {...register(name)}
+          {...(inputProps as React.TextareaHTMLAttributes<HTMLTextAreaElement>)}
+          defaultValue={defaultValue}
+        />
+      ) : (
+        // Senão, renderiza o campo <input> normal
+        <input
+          id={name}
+          type={type}
+          placeholder={label} 
+          className={commonClasses}
+          {...register(name)}
+          {...(inputProps as React.InputHTMLAttributes<HTMLInputElement>)}
+          defaultValue={defaultValue}
+        />
+      )}
 
       {error?.message && (
         <span className="text-red-600 text-sm">{error.message.toString()}</span>

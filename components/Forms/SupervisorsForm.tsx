@@ -19,7 +19,7 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
-const OperadoresForm = ({ 
+const SupervisorForm = ({ 
   type, 
   data, 
   tableLabel, 
@@ -70,4 +70,4 @@ const OperadoresForm = ({
   );
 };
 
-export default OperadoresForm;
+export default SupervisorForm;

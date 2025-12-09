@@ -1,4 +1,4 @@
-import { Home, Inbox, Calendar, Search, Settings, } from "lucide-react"
+import { Home, Inbox, Calendar, Search, Settings, Smile, UsersRound, UsersIcon, UserRoundCheck, UserStar, PhoneForwarded, BadgeEuro, Heart } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip"
 
 const items = [
@@ -8,12 +8,7 @@ const items = [
     icon: Home,
     href: "/"
   },
-  {
-    title: "Inbox",
-    url: "#",
-    icon: Inbox,
-    href: "/inbox"
-  },
+
   {
     title: "Calendar",
     url: "#",
@@ -21,10 +16,61 @@ const items = [
     href: "/calendar"
   },
   {
-    title: "Search",
+    title: "Pesquisa",
     url: "#",
     icon: Search,
-    href: "/search"
+    href: "/pesquisa"
+  },
+
+  {
+    title: "Vendas",
+    url: "#",
+    icon: BadgeEuro,
+    href: "/vendas"
+  },
+  {
+    title: "Operadores",
+    url: "#",
+    icon: UsersIcon ,
+    href: "/lists/operadores"
+  },
+  {
+    title: "Vendedores (D2D)",
+    url: "#",
+    icon: UsersRound ,
+    href: "/lists/d2d"
+  },
+  {
+    title: "Supervisores",
+    url: "#",
+    icon:UserRoundCheck ,
+    href: "/lists/supervisores"
+  },
+  {
+    title: "Administradores",
+    url: "#",
+    icon: UserStar,
+    href: "/lists/administradores"
+  },
+  {
+    title: "Callbacks",
+    url: "#",
+    icon: PhoneForwarded,
+    href: "/callbacks"
+  },
+
+  {
+    title: "Dinamicas",
+    url: "#",
+    icon: Smile,
+    href: "/dinamicas"
+  },
+
+  {
+    title: "Social",
+    url: "#",
+    icon: Heart,
+    href: "/dinamicas"
   },
   {
     title: "Settings",
@@ -32,46 +78,17 @@ const items = [
     icon: Settings,
     href: "/settings"
   },
-   {
-    title: "item 0",
-    url: "#",
-    icon: Home,
-    href: "/"
-  },
-  {
-    title: "item 1",
-    url: "#",
-    icon: Inbox,
-    href: "/inbox"
-  },
-  {
-    title: "item 2",
-    url: "#",
-    icon: Calendar,
-    href: "/calendar"
-  },
-  {
-    title: "item 3",
-    url: "#",
-    icon: Search,
-    href: "/search"
-  },
-  {
-    title: "item 4",
-    url: "#",
-    icon: Settings,
-    href: "/settings"
-  },
+   
 ]
 
 
 
 const AppSideBar = () => {
   return (
-    <div className=''>
+    <div className=' dark:bg-gray-900'>
         
         {items.map((item) => (
-            <div key={item.title} className="flex items-end-safe font-light text-sm">
+            <div key={item.title} className="flex items-end-safe font-light text-sm ">
                 
 
                 
@@ -82,7 +99,7 @@ const AppSideBar = () => {
                 </TooltipTrigger>
                 <TooltipContent>{item.title}</TooltipContent>
                 </Tooltip>                                   
-                <span className="mr-2 hidden lg:block ">{item.title }</span>
+                <span className="mr-2 hidden lg:block cursor-pointer">{item.title }</span>
                 </a>
                 
                 </div>

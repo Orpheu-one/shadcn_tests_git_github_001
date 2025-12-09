@@ -81,11 +81,11 @@ const renderRow = (item: EventWithRelations)=>(
         <td className=""> 
             <div className="flex items-center gap-2">
                 {/* Botão de Edição */}
-                <FormModal table="operador" type="edit" />
+                <FormModal table="vendas" type="edit" />
             
                 {/* Botão de Eliminar (apenas para Admin) */}
                 {role === "admin" && (
-                    <FormModal table="operador" type="delete" id={item.id}/>
+                    <FormModal table="vendas" type="delete" id={item.id}/>
                 )}
             </div>
         </td>
@@ -129,7 +129,7 @@ const EventsPage = async ({ searchParams }: SearchProps) => {
                 <p>Cria o primeiro operador para começar!</p>
                 {role === "admin" && (
                     <div className="mt-4 inline-block">
-                        <FormModal table="operador" type="create" />
+                        <FormModal table="vendas" type="create" />
                     </div>
                 )}
             </div>
@@ -140,6 +140,10 @@ const EventsPage = async ({ searchParams }: SearchProps) => {
 
     // 5. RENDERIZAÇÃO
     return (
+
+
+
+        
         <div className=' flex-1 bg-white p-4 rounded-lg m-4 mt-0'>
             {/* TOP */}
             <div className="flex items-center justify-between ">
@@ -155,7 +159,7 @@ const EventsPage = async ({ searchParams }: SearchProps) => {
                             <Image src="/sort.png" alt="Ordenar" width={15} height={15} className="" />
                         </button>
                         {role === "admin" && (
-                            <FormModal table="operador" type="create" />
+                            <FormModal table="vendas" type="create" />
                         )}
                     </div>
                 </div>

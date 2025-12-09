@@ -24,6 +24,6 @@
       "@prisma/*": ["node_modules/.prisma/"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "components/GoogleMaps/googleMap.jsx"],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "components/GoogleMaps/googleMap.jsx", "components/VendasSwitches.jsx"],
   "exclude": ["node_modules"]
 }
