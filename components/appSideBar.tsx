@@ -26,7 +26,7 @@ const items = [
     title: "Vendas",
     url: "#",
     icon: BadgeEuro,
-    href: "/vendas"
+    href: "/lists/vendas"
   },
   {
     title: "Operadores",
@@ -70,7 +70,7 @@ const items = [
     title: "Social",
     url: "#",
     icon: Heart,
-    href: "/dinamicas"
+    href: "/social"
   },
   {
     title: "Settings",
