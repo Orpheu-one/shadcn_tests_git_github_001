@@ -1,21 +1,39 @@
-import { PrismaClient } from "@prisma/client"
+// lib/prisma.ts
+import { PrismaClient } from '@prisma/client'
 
-// A lógica global garante que, mesmo com o Hot Reloading do Next.js
-// no modo de desenvolvimento, só haja UMA instância do Prisma Client.
-
-// Cria um tipo global para evitar erros de tipagem
-const globalForPrisma = global as unknown as { prisma: PrismaClient }
-
-// Inicializa a instância. Se já existir em 'globalForPrisma', usa-a. Se não, cria uma nova.
-const prisma = globalForPrisma.prisma || new PrismaClient({
-    // Opcional: Permite ver as queries SQL no console
-    log: ['query', 'info', 'warn', 'error'], 
-})
-
-// Em desenvolvimento, guarda a instância no objeto global para reutilização
-if (process.env.NODE_ENV !== 'production') {
-    globalForPrisma.prisma = prisma
+// Verificação de segurança
+if (!process.env.DATABASE_URL) {
+  throw new Error(
+    '❌ DATABASE_URL não está definida!\n' +
+    'Verifique se o ficheiro .env existe na raiz do projeto.'
+  )
 }
 
-// Exportamos a única instância para ser usada em toda a aplicação (ex: "@/lib/prisma")
+// Log de debug (apenas em desenvolvimento)
+if (process.env.NODE_ENV === 'development') {
+  const dbUrl = process.env.DATABASE_URL
+  console.log('✅ Prisma conectado:', dbUrl.replace(/:[^:@]+@/, ':****@'))
+}
+
+// Declaração global para evitar múltiplas instâncias
+declare global {
+  var prisma: PrismaClient | undefined
+}
+
+// Singleton pattern
+const prismaClientSingleton = () => {
+  return new PrismaClient({
+    log: process.env.NODE_ENV === 'development' 
+      ? ['error', 'warn'] 
+      : ['error'],
+  })
+}
+
+// Em desenvolvimento, usa a instância global
+const prisma = globalThis.prisma ?? prismaClientSingleton()
+
+if (process.env.NODE_ENV !== 'production') {
+  globalThis.prisma = prisma
+}
+
 export default prisma

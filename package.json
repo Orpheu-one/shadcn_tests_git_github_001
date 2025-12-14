@@ -3,16 +3,22 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "predev": "npx dotenv -e .env -- npx prisma generate",
     "dev": "next dev",
-    "build": "next build --turbopack",
+    "build": "npx dotenv -e .env -- npx prisma generate && next build --turbopack",
     "start": "next start",
     "lint": "eslint",
-    "migrate": "dotenv -e .env -- npx prisma migrate dev",
-    "prisma:generate": "npx prisma generate",
-    "seed": "dotenv -e .env -- tsx prisma/seed.ts"
+    
+    "migrate": "npx dotenv -e .env -- npx prisma migrate dev",
+    "prisma:generate": "npx dotenv -e .env -- npx prisma generate",
+    "prisma:push": "npx dotenv -e .env -- npx prisma db push",
+    "prisma:studio": "npx dotenv -e .env -- npx prisma studio",
+    "prisma:validate": "npx dotenv -e .env -- npx prisma validate",
+    "seed": "npx dotenv -e .env -- tsx prisma/seed.ts",
+    
+    "prisma:reset": "rm -rf .next && rm -rf node_modules/.prisma && npm run prisma:generate",
+    "dev:fresh": "npm run prisma:reset && npm run dev"
   },
-
-
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
     "@prisma/client": "^6.19.0",
@@ -61,7 +67,4 @@
     "tw-animate-css": "^1.3.7",
     "typescript": "^5.9.3"
   }
-
- 
-
 }
