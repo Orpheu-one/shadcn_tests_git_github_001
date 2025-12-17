@@ -1,115 +1,122 @@
-import { Home, Inbox, Calendar, Search, Settings, Smile, UsersRound, UsersIcon, UserRoundCheck, UserStar, PhoneForwarded, BadgeEuro, Heart } from "lucide-react"
+"use client"
+
+import { useUser } from "@clerk/nextjs"
+import { Home, Calendar, Search, Settings, Smile, UsersRound, UsersIcon, UserRoundCheck, UserStar, PhoneForwarded, BadgeEuro, Heart } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip"
 
+// Define all menu items with role restrictions
 const items = [
   {
     title: "Home",
-    url: "#",
     icon: Home,
-    href: "/"
+    href: "/",
+    allowedRoles: ["admin", "super-admin", "supervisor", "operador", "vendedor"], // All
   },
-
   {
     title: "Calendar",
-    url: "#",
     icon: Calendar,
-    href: "/calendar"
+    href: "/calendar",
+    allowedRoles: ["admin", "super-admin", "supervisor", "operador", "vendedor"], // All
   },
   {
     title: "Pesquisa",
-    url: "#",
     icon: Search,
-    href: "/pesquisa"
+    href: "/pesquisa",
+    allowedRoles: ["admin", "super-admin", "supervisor", "operador", "vendedor"], // All
   },
-
   {
     title: "Vendas",
-    url: "#",
     icon: BadgeEuro,
-    href: "/lists/vendas"
+    href: "/lists/vendas",
+    allowedRoles: ["admin", "super-admin", "supervisor", "operador", "vendedor"], // All (filtered in page)
   },
   {
     title: "Operadores",
-    url: "#",
-    icon: UsersIcon ,
-    href: "/lists/operadores"
+    icon: UsersIcon,
+    href: "/lists/operadores",
+    allowedRoles: ["admin", "super-admin", "supervisor"], // Management only
   },
   {
     title: "Vendedores (D2D)",
-    url: "#",
-    icon: UsersRound ,
-    href: "/lists/d2d"
+    icon: UsersRound,
+    href: "/lists/d2d",
+    allowedRoles: ["admin", "super-admin", "supervisor"], // Management only
   },
   {
     title: "Supervisores",
-    url: "#",
-    icon:UserRoundCheck ,
-    href: "/lists/supervisores"
+    icon: UserRoundCheck,
+    href: "/lists/supervisores",
+    allowedRoles: ["admin", "super-admin", "supervisor"], // Management only
   },
   {
     title: "Administradores",
-    url: "#",
     icon: UserStar,
-    href: "/lists/administradores"
+    href: "/lists/administradores",
+    allowedRoles: ["admin", "super-admin"], // Top level only
   },
   {
     title: "Callbacks",
-    url: "#",
     icon: PhoneForwarded,
-    href: "/callbacks"
+    href: "/callbacks",
+    allowedRoles: ["admin", "super-admin", "supervisor", "operador"], // NOT vendedor
   },
-
   {
     title: "Dinamicas",
-    url: "#",
     icon: Smile,
-    href: "/dinamicas"
+    href: "/dinamicas",
+    allowedRoles: ["admin", "super-admin", "supervisor", "operador", "vendedor"], // All
   },
-
   {
     title: "Social",
-    url: "#",
     icon: Heart,
-    href: "/social"
+    href: "/social",
+    allowedRoles: ["admin", "super-admin", "supervisor", "operador", "vendedor"], // All
   },
   {
     title: "Settings",
-    url: "#",
     icon: Settings,
-    href: "/settings"
+    href: "/settings",
+    allowedRoles: ["admin", "super-admin", "supervisor", "operador", "vendedor"], // All
   },
-   
 ]
 
+const SideBar = () => {
+  const { user, isLoaded } = useUser()
+  
+  // Get user role from publicMetadata
+  const userRole = user?.publicMetadata?.role as string | undefined
 
+  // Loading state
+  if (!isLoaded) {
+    return (
+      <div className="dark:bg-gray-900 p-4">
+        <p className="text-white text-sm">A carregar menu...</p>
+      </div>
+    )
+  }
 
-const AppSideBar = () => {
+  // Filter items based on user role
+  const visibleItems = items.filter(item => 
+    userRole && item.allowedRoles.includes(userRole)
+  )
+
   return (
-    <div className=' dark:bg-gray-900'>
-        
-        {items.map((item) => (
-            <div key={item.title} className="flex items-end-safe font-light text-sm ">
-                
-
-                
-                <a href={item.href} className="flex gap-2 py-4 text-sm text-white font-light">
-                <Tooltip>
-                <TooltipTrigger asChild>
+    <div className="dark:bg-gray-900">
+      {visibleItems.map((item) => (
+        <div key={item.title} className="flex items-end-safe font-light text-sm">
+          <a href={item.href} className="flex gap-2 py-4 text-sm text-white font-light">
+            <Tooltip>
+              <TooltipTrigger asChild>
                 <item.icon />
-                </TooltipTrigger>
-                <TooltipContent>{item.title}</TooltipContent>
-                </Tooltip>                                   
-                <span className="mr-2 hidden lg:block cursor-pointer">{item.title }</span>
-                </a>
-                
-                </div>
-                ))}
-            
-       
-            
-             
+              </TooltipTrigger>
+              <TooltipContent>{item.title}</TooltipContent>
+            </Tooltip>                                   
+            <span className="mr-2 hidden lg:block cursor-pointer">{item.title}</span>
+          </a>
+        </div>
+      ))}
     </div>
   )
 }
 
-export default AppSideBar
+export default SideBar

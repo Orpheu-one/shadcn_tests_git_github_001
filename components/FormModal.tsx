@@ -1,4 +1,3 @@
-// FormModal.tsx
 "use client"
 
 import Image from "next/image";
@@ -6,29 +5,38 @@ import React, { JSX } from "react";
 import dynamic from "next/dynamic";
 import { UserRole } from '@prisma/client'; 
 
+// --- DYNAMIC IMPORTS ---
 const OperadoresForm = dynamic(() => import("./Forms/OperadoresForm"), { loading: () => <p>Loading...</p> });
 const D2dForm = dynamic(() => import("./Forms/D2dForm"), { loading: () => <p>Loading...</p> });
 const VendasForm = dynamic(() => import("./Forms/VendasForm"), { loading: () => <p>Loading...</p> });
-// NOVO: Importa o componente de formulário para Supervisores
 const SupervisorsForm = dynamic(() => import("./Forms/SupervisorsForm"), { loading: () => <p>Loading...</p> }); 
 
-// 1. ATUALIZAR MAPEAMENTO: Inclui o novo formulário de Supervisor
+// --- FORMS MAPPING ---
 const forms: {
   [key: string]: (
     type: "create" | "edit",
     data: any,
     tableLabel: string,
     formId: string, 
-    userRole: UserRole 
+    userRole: UserRole,
+    eventId?: number // Added this parameter to the type definition
   ) => JSX.Element;
 } = {
   operador: (t, d, l, id, role) => <OperadoresForm type={t} data={d} tableLabel={l!} formId={id} userRole={role} />,
   d2d: (t, d, l, id, role) => <D2dForm type={t} data={d} tableLabel={l!} formId={id} userRole={role} />,
-  vendas: (t, d, l, id, role) => <VendasForm type={t} data={d} tableLabel={l!} formId={id} userRole={role} />,
-  // Mapeamento adicionado
+  vendas: (t, d, l, id, role, eventId) => (
+    <VendasForm 
+      type={t} 
+      data={d} 
+      tableLabel={l!} 
+      formId={id} 
+      eventId={eventId} // Passing the id here to trigger the fetch in VendasForm
+    />
+  ),
   supervisor: (t, d, l, id, role) => <SupervisorsForm type={t} data={d} tableLabel={l!} formId={id} userRole={role} />,
 };
 
+// --- TYPES ---
 type TableType = "d2d" | "operador" | "supervisor" | "vendas" | "projecto" | "resultado" | "callback";
 type FormType = "create" | "edit" | "delete";
 
@@ -36,30 +44,28 @@ type FormModalProps = {
   table: TableType;
   type: FormType;
   data?: any;
-  id?: number;
+  id?: number; // This id will be passed as eventId
   userRole: UserRole; 
 };
 
+// --- COMPONENT ---
 const FormModal = ({ table, type, data, id, userRole }: FormModalProps) => {
   const [open, setOpen] = React.useState(false);
+  
   const size = type === "create" ? "w-8 h-8" : "w-7 h-7";
   const bgColor = type === "create" ? "bg-pink-300" : type === "edit" ? "bg-yellow-500" : "bg-red-500";
 
   const labelMap: Record<TableType, string> = {
     d2d: "Vendedor",
     operador: "Operador de Call",
-    supervisor: "Supervisor", // Supervisor incluído no mapeamento de labels
+    supervisor: "Supervisor",
     vendas: "Venda",
     projecto: "Projecto",
     resultado: "Resultado",
     callback: "Callback",
   };
 
-  /**
-   * Define qual o componente de formulário a carregar ('d2d', 'operador', 'vendas', 'supervisor', etc.)
-   */
   const getFormKey = (): string => {
-    // A lógica de Vendas permanece inalterada
     if (table === "vendas") {
       switch (userRole) {
         case UserRole.ADMIN:
@@ -72,13 +78,10 @@ const FormModal = ({ table, type, data, id, userRole }: FormModalProps) => {
           return "vendas"; 
       }
     }
-    // Para todas as outras tabelas (operador, d2d, supervisor, etc.), o nome da tabela é a chave do form.
     return table; 
   };
   
   const formKey = getFormKey(); 
-  
-  // 2. GERAR ID ÚNICO
   const formId = `form-${table}-${type}`;
 
   const Form = () =>
@@ -95,8 +98,8 @@ const FormModal = ({ table, type, data, id, userRole }: FormModalProps) => {
         </div>
       </form>
     ) : (
-      // 3. PASSAGEM DO userRole PARA O FORMULÁRIO
-      forms[formKey](type, data, labelMap[table], formId, userRole)
+      // Passing 'id' as the 6th argument so it reaches VendasForm as eventId
+      forms[formKey](type, data, labelMap[table], formId, userRole, id)
     );
 
   return (
@@ -114,12 +117,10 @@ const FormModal = ({ table, type, data, id, userRole }: FormModalProps) => {
           <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
             <div className="bg-white w-[90%] md:w-[70%] lg:w-[60%] xl:w-[50%] 2xl:w-[40%] p-6 rounded-lg text-black relative flex flex-col max-h-[90vh] pointer-events-auto">
               
-              {/* Área do Título e Formulário (com Scroll automático se necessário) */}
               <div className="overflow-y-auto pr-2 custom-scrollbar">
                   <Form />
               </div>
 
-              {/* Área dos Botões (Fica sempre visível no fundo) */}
               {type !== "delete" && (
                 <div className="mt-6 flex justify-between gap-4 pt-4 border-t border-gray-100">
                   <button 
@@ -129,7 +130,6 @@ const FormModal = ({ table, type, data, id, userRole }: FormModalProps) => {
                     Cancelar
                   </button>
                   
-                  {/* BOTÃO SUBMIT EXTERNO */}
                   <button 
                     type="submit"
                     form={formId} 
