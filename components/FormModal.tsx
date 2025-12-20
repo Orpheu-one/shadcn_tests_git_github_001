@@ -19,32 +19,61 @@ const forms: {
     tableLabel: string,
     formId: string, 
     userRole: UserRole,
-    eventId?: number // Added this parameter to the type definition
+    id?: number, // ✅ ID do item (eventId ou userId)
   ) => JSX.Element;
 } = {
-  operador: (t, d, l, id, role) => <OperadoresForm type={t} data={d} tableLabel={l!} formId={id} userRole={role} />,
-  d2d: (t, d, l, id, role) => <D2dForm type={t} data={d} tableLabel={l!} formId={id} userRole={role} />,
-  vendas: (t, d, l, id, role, eventId) => (
+  // ✅ Corrigido: passa 'id' como userId
+  operador: (t, d, l, formId, role, id) => (
+    <OperadoresForm 
+      type={t} 
+      data={d} 
+      tableLabel={l} 
+      formId={formId} 
+      userId={id} // ✅ Agora passa o id correto
+    />
+  ),
+  
+  d2d: (t, d, l, formId, role, id) => (
+    <D2dForm 
+      type={t} 
+      data={d} 
+      tableLabel={l} 
+      formId={formId} 
+      userRole={role} 
+    />
+  ),
+  
+  // ✅ Vendas recebe 'id' como eventId
+  vendas: (t, d, l, formId, role, id) => (
     <VendasForm 
       type={t} 
       data={d} 
-      tableLabel={l!} 
-      formId={id} 
-      eventId={eventId} // Passing the id here to trigger the fetch in VendasForm
+      tableLabel={l} 
+      formId={formId} 
+      eventId={id} // ✅ Passa como eventId
     />
   ),
-  supervisor: (t, d, l, id, role) => <SupervisorsForm type={t} data={d} tableLabel={l!} formId={id} userRole={role} />,
+  
+  supervisor: (t, d, l, formId, role, id) => (
+    <SupervisorsForm 
+      type={t} 
+      data={d} 
+      tableLabel={l} 
+      formId={formId} 
+      userRole={role} 
+    />
+  ),
 };
 
 // --- TYPES ---
-type TableType = "d2d" | "operador" | "supervisor" | "vendas" | "projecto" | "resultado" | "callback";
+type TableType = "d2d" | "operador" | "supervisor" | "vendas" | "projecto" | "resultado" | "callback" | "admin";
 type FormType = "create" | "edit" | "delete";
 
 type FormModalProps = {
   table: TableType;
   type: FormType;
   data?: any;
-  id?: number; // This id will be passed as eventId
+  id?: number; // ✅ ID genérico (eventId ou userId)
   userRole: UserRole; 
 };
 
@@ -63,6 +92,7 @@ const FormModal = ({ table, type, data, id, userRole }: FormModalProps) => {
     projecto: "Projecto",
     resultado: "Resultado",
     callback: "Callback",
+    admin: "Administrador",
   };
 
   const getFormKey = (): string => {
@@ -82,23 +112,30 @@ const FormModal = ({ table, type, data, id, userRole }: FormModalProps) => {
   };
   
   const formKey = getFormKey(); 
-  const formId = `form-${table}-${type}`;
+  const formId = `form-${table}-${type}-${id || 'new'}`;
 
   const Form = () =>
     type === "delete" && id ? (
       <form action="" className="p-4 flex flex-col gap-4">
         <p>Quer eliminar este item? Esta operação não tem retorno.</p>
         <div className="flex gap-4 justify-end mt-4">
-            <button type="button" onClick={() => setOpen(false)} className="bg-gray-300 text-gray-800 py-2 px-4 rounded-md">
-                Cancelar
-            </button>
-            <button type="submit" className="bg-red-500 text-white py-2 px-4 rounded-md">
-                Eliminar
-            </button>
+          <button 
+            type="button" 
+            onClick={() => setOpen(false)} 
+            className="bg-gray-300 text-gray-800 py-2 px-4 rounded-md hover:bg-gray-400 transition-colors"
+          >
+            Cancelar
+          </button>
+          <button 
+            type="submit" 
+            className="bg-red-500 text-white py-2 px-4 rounded-md hover:bg-red-600 transition-colors"
+          >
+            Eliminar
+          </button>
         </div>
       </form>
     ) : (
-      // Passing 'id' as the 6th argument so it reaches VendasForm as eventId
+      // ✅ Passa todos os parâmetros na ordem correta
       forms[formKey](type, data, labelMap[table], formId, userRole, id)
     );
 
@@ -113,14 +150,22 @@ const FormModal = ({ table, type, data, id, userRole }: FormModalProps) => {
 
       {open && (
         <>
-          <div className="fixed inset-0 bg-black opacity-90 z-40" onClick={() => setOpen(false)} />
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 bg-black opacity-90 z-40" 
+            onClick={() => setOpen(false)} 
+          />
+          
+          {/* Modal */}
           <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
             <div className="bg-white w-[90%] md:w-[70%] lg:w-[60%] xl:w-[50%] 2xl:w-[40%] p-6 rounded-lg text-black relative flex flex-col max-h-[90vh] pointer-events-auto">
               
+              {/* Scrollable content */}
               <div className="overflow-y-auto pr-2 custom-scrollbar">
-                  <Form />
+                <Form />
               </div>
 
+              {/* Action buttons (não mostrar em delete) */}
               {type !== "delete" && (
                 <div className="mt-6 flex justify-between gap-4 pt-4 border-t border-gray-100">
                   <button 

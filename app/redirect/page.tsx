@@ -1,23 +1,36 @@
 import { redirect } from 'next/navigation'
-import { currentUser } from '@clerk/nextjs/server'
+import { auth } from '@clerk/nextjs/server'
 
 export default async function RedirectPage() {
-  const user = await currentUser()
+  // Use auth() to get user session
+  const { userId, sessionClaims } = await auth()
   
-  if (!user) {
+  if (!userId) {
+    console.log('❌ No userId, redirecting to sign-in')
     redirect('/sign-in')
   }
+
+  // Get role from session claims
+  const role = (sessionClaims?.metadata as any)?.userRole as string | undefined
   
-  const role = (user.publicMetadata as any)?.role as string
+  console.log('🔍 User ID:', userId)
+  console.log('🔍 Role:', role || 'undefined')
   
-  console.log('🔍 Role:', role)
+  // Route based on role (NO try-catch around redirects!)
+  if (role === 'super-admin' || role === 'admin') {
+    redirect('/admin')
+  }
+  if (role === 'supervisor') {
+    redirect('/supervisor')
+  }
+  if (role === 'operador' || role === 'operator') {
+    redirect('/operador')
+  }
+  if (role === 'vendedor' || role === 'd2d') {
+    redirect('/vendedor')
+  }
   
-  // Simple mapping - matches your actual file structure
-  if (role === 'super-admin' || role === 'admin') redirect('/admin')
-  if (role === 'supervisor') redirect('/supervisor')
-  if (role === 'operador') redirect('/operador')
-  if (role === 'vendedor') redirect('/vendedor')
-  
-  // Fallback
+  // Fallback for unknown roles
+  console.warn('⚠️ Unknown role, redirecting to admin')
   redirect('/admin')
 }

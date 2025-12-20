@@ -89,6 +89,30 @@ const VendasForm = ({
     resolver: zodResolver(schema),
   });
 
+  // FETCH OPERATOR DATA (Create Mode)
+  const [operatorDetails, setOperatorDetails] = useState<FetchedOperator | null>(null);
+
+  useEffect(() => {
+    if (type === "create" && operatorId) {
+      const fetchOperator = async () => {
+        try {
+          const response = await fetch(`/api/operators/${operatorId}`);
+          if (!response.ok) throw new Error('Operator not found');
+          const data = await response.json();
+          setOperatorDetails({
+            id: operatorId,
+            frst_name: data.frst_name,
+            lst_name: data.lst_name,
+            role: data.role,
+          });
+        } catch (error) {
+          console.error("Erro ao carregar operador:", error);
+        }
+      };
+      fetchOperator();
+    }
+  }, [type, operatorId]);
+
   // FETCH EVENT DATA (Edit Mode)
   useEffect(() => {
     if (type === "edit" && eventId) {
@@ -103,6 +127,7 @@ const VendasForm = ({
           
           const data: FetchedEventData = await response.json();
           setEventData(data);
+          setOperatorDetails(data.operator); // ✅ Also set operator from event
 
           // Pre-fill form fields
           setValue('name', data.client.frst_name);
@@ -145,17 +170,62 @@ const VendasForm = ({
     }
   }, [type, eventId, setValue]);
 
-  const onSubmit = handleSubmit((formData) => {
-    console.log("Vendas Submit:", {
-      ...formData,
-      eventId: eventId,
-      userId: eventData?.operator.id || operatorId,
-      vendaStatus: vendaStatus,
-    });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const onSubmit = handleSubmit(async (formData) => {
+    setIsSubmitting(true);
+    
+    try {
+      const payload = {
+        name: formData.name,
+        apelido: formData.apelido,
+        email: formData.email,
+        phone: formData.phone,
+        address: formData.address,
+        obs: formData.obs,
+        vendaStatus: vendaStatus,
+      };
+
+      let response;
+      
+      if (type === "create") {
+        // CREATE
+        response = await fetch('/api/events', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+      } else {
+        // UPDATE
+        response = await fetch(`/api/events/${eventId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+      }
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Erro ao salvar');
+      }
+
+      console.log('✅ Sucesso:', result);
+      alert(`${type === "create" ? "Criado" : "Atualizado"} com sucesso!`);
+      
+      // Reload page to see changes
+      window.location.reload();
+
+    } catch (error) {
+      console.error('❌ Erro:', error);
+      alert(`Erro: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+    } finally {
+      setIsSubmitting(false);
+    }
   });
 
-  // Get operator from event data (edit) or use operatorId (create)
-  const currentOperator = eventData?.operator || null;
+  // Get operator info
+  const currentOperator = operatorDetails;
   const displayOperatorId = currentOperator?.id || operatorId;
 
   return (
@@ -199,9 +269,7 @@ const VendasForm = ({
       {/* OPERATOR SECTION */}
       <div className="lg:col-span-3">
         <p className="text-xs text-gray-500 font-medium mb-1">Operador Responsável:</p>
-        {isLoadingEvent && type === "edit" ? (
-          <p className="text-sm text-gray-500">A carregar...</p>
-        ) : currentOperator ? (
+        {currentOperator ? (
           <div className="p-2 bg-gray-50 rounded-md">
             <span className="text-sm font-semibold text-black"> 
               {currentOperator.frst_name} {currentOperator.lst_name} 
@@ -209,9 +277,7 @@ const VendasForm = ({
             <span className="text-xs text-gray-500"> (ID: {currentOperator.id} - {currentOperator.role})</span>
           </div>
         ) : (
-          <p className="text-sm text-red-500">
-            ID: {displayOperatorId} (Criar modo - detalhes não carregados)
-          </p>
+          <p className="text-sm text-gray-500">A carregar operador...</p>
         )}
       </div>
 
@@ -251,6 +317,13 @@ const VendasForm = ({
           inputProps={{}}
         />
       </div>
+
+      {/* Submit button moved to FormModal */}
+      {isSubmitting && (
+        <div className="lg:col-span-3 text-center">
+          <p className="text-purple-600 font-semibold">A guardar...</p>
+        </div>
+      )}
     </form>
   );
 };

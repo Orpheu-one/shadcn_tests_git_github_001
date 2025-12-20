@@ -1,27 +1,21 @@
-
-
 import FormModal from "@/components/FormModal"
 import Pagination from "@/components/Pagination"
 import Table from "@/components/Table"
 import TableSearch from "@/components/TableSearch"
 import { role } from "@/lib/data"
-// O prisma deve ser importado corretamente (o caminho pode variar)
 import prisma from "@/lib/prisma" 
 import { ITEMS_PER_PAGE } from "@/lib/settings"
-import { Prisma, User, UserRole } from "@prisma/client"
-import { SearchParams } from "next/dist/server/request/search-params"
+import { Prisma } from "@prisma/client"
 import Image from "next/image" 
 
 interface SearchProps {
-  // O Next.js injeta isto automaticamente quando o componente é usado como uma Page
-  searchParams: { [key: string]: string | string[] | undefined };
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>; // ✅ FIXED: Promise
 }
-// 1. DEFINIÇÃO DO TIPO: Define o que esperamos da base de dados (User + Events)
+
 type UserWithEvents = Prisma.UserGetPayload<{
     include: { events: true }; 
 }>;
 
-// Colunas da Tabela
 const columns = [
     {
         header:"Info", accessor:"info",
@@ -36,7 +30,6 @@ const columns = [
         header:"Telefone", accessor:"phone", className:"hidden md:table-cell",
     },
     {
-        // Nota: O teu código original usa 'role' para esta coluna
         header:"Nível de Acesso (Role)", accessor:"role", className:"hidden lg:table-cell", 
     },
     {
@@ -44,10 +37,7 @@ const columns = [
     },
 ]
 
-// 2. FUNÇÃO DE RENDERIZAÇÃO DA LINHA
-// Garante que o item é do tipo esperado pelo Prisma (User + Events)
 const renderRow = (item: UserWithEvents)=>(
-
     <tr key={item.id} className="border-b border-gray-500 even:bg-purple-300 hover:bg-purple-500">
         <td className="flex items-center gap-4 p-4">
             <Image 
@@ -65,68 +55,56 @@ const renderRow = (item: UserWithEvents)=>(
         <td className="table-cell">{item.userId}</td>
         <td className="hidden md:table-cell">{item.frst_name}</td>
         <td className="hidden md:table-cell">{item.phone}</td>
-        {/* A coluna "Address" original foi substituída por "role" conforme a tua implementação */}
         <td className="hidden md:table-cell">{item.role}</td> 
 
         <td className=""> 
             <div className="flex items-center gap-2">
-                {/* Botão de Edição */}
-                <FormModal table="operador" type="edit" />
+                {/* ✅ FIXED: Pass user ID to edit */}
+                <FormModal table="operador" type="edit" id={item.id} userRole={item.role} />
             
-                {/* Botão de Eliminar (apenas para Admin) */}
+                {/* Delete button (admin only) */}
                 {role === "admin" && (
-                    <FormModal table="operador" type="delete" id={item.id}/>
+                    <FormModal table="operador" type="delete" id={item.id} userRole={item.role} />
                 )}
             </div>
         </td>
     </tr>
 )
 
-// COMPONENTE PRINCIPAL (SERVER COMPONENT)
 const OperadoresPage = async ({ searchParams }: SearchProps) => {
-  const {page,...queryParams}= searchParams;
-
+  // ✅ FIXED: Await searchParams in Next.js 15
+  const params = await searchParams;
+  const { page, ...queryParams } = params;
+  
   const p = page ? parseInt(page as string, 10) : 1;
 
-    // --- 3. CONSULTA DOS DADOS ---
-    // Usamos findMany para buscar *todos* os utilizadores (uma lista)
-    // Tipamos o resultado como um array: UserWithEvents[]
     const operadores: UserWithEvents[] = await prisma.user.findMany({
         include: {
-            events: true, // Inclui os eventos relacionados (para a tipagem)
+            events: true,
         },
-        take: ITEMS_PER_PAGE, // Limita a 10 resultados para evitar sobrecarga
-        skip: (p - 1) * ITEMS_PER_PAGE, // Paginação simples
-        // Ordenação (opcional, mas bom para listas)
+        take: ITEMS_PER_PAGE,
+        skip: (p - 1) * ITEMS_PER_PAGE,
         orderBy: {
             frst_name: 'asc'
         },
-        
     });
 
     const count = await prisma.user.count();  
 
-   
-
-    // 4. VERIFICAÇÃO (Exemplo: Se a lista estiver vazia)
     if (operadores.length === 0) {
-        // Podíamos retornar um componente de "Lista Vazia" mais bonito
         return (
             <div className="p-8 text-center bg-gray-100 text-gray-700 rounded-lg m-4 mt-0">
                 <h2 className="text-xl font-bold">Nenhum Operador Encontrado</h2>
                 <p>Cria o primeiro operador para começar!</p>
                 {role === "admin" && (
                     <div className="mt-4 inline-block">
-                        <FormModal table="operador" type="create" />
+                        <FormModal table="operador" type="create" userRole="ADMIN" />
                     </div>
                 )}
             </div>
         );
     }
-    // --- Fim da Lógica de Consulta ---
 
-
-    // 5. RENDERIZAÇÃO
     return (
         <div className=' flex-1 bg-white p-4 rounded-lg m-4 mt-0'>
             {/* TOP */}
@@ -143,7 +121,7 @@ const OperadoresPage = async ({ searchParams }: SearchProps) => {
                             <Image src="/sort.png" alt="Ordenar" width={15} height={15} className="" />
                         </button>
                         {role === "admin" && (
-                            <FormModal table="operador" type="create" />
+                            <FormModal table="operador" type="create" userRole="ADMIN" />
                         )}
                     </div>
                 </div>
@@ -151,7 +129,6 @@ const OperadoresPage = async ({ searchParams }: SearchProps) => {
             
             {/* LISTA */}
             <div className="text-black overflow-x-auto">
-                {/* PASSAMOS O ARRAY DE DADOS COMPLETO PARA O COMPONENTE TABLE */}
                 <Table columns={columns} renderRow={renderRow} data={operadores} />
             </div>
             

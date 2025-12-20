@@ -11,7 +11,7 @@
     "migrate": "npx dotenv -e .env -- npx prisma migrate dev",
     "prisma:generate": "npx dotenv -e .env -- npx prisma generate",
     "prisma:push": "npx dotenv -e .env -- npx prisma db push",
-    "prisma:studio": "npx dotenv -e .env -- npx prisma studio",
+    "prisma:studio": "npx dotenv -e .env -- npx prisma studio --port 5553",
     "prisma:validate": "npx dotenv -e .env -- npx prisma validate",
     "seed": "npx dotenv -e .env -- tsx prisma/seed.ts",
     "prisma:reset": "rm -rf .next && rm -rf node_modules/.prisma && npm run prisma:generate",
