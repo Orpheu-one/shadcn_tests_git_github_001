@@ -1,115 +1,82 @@
-// O teu provedor de base de dados (MySQL/MariaDB)
 datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
-// O gerador do Prisma Client
 generator client {
   provider = "prisma-client-js"
 }
 
-// --- ENUMS ---
-
-// Definicao dos papéis de utilizador
 enum UserRole {
-  OPERATOR  // operador de vendas
-  ADMIN     // administrador
-  D2D       // porta-a-porta (door-to-door)
-  SUPERVISOR // supervisor de equipa
+  OPERATOR
+  ADMIN
+  D2D
+  SUPERVISOR
 }
 
-// Definição do tipo de evento
 enum EventType {
-  SALE      // Venda concluída
-  CALLBACK  // Ligação de retorno/Follow-up
+  SALE
+  CALLBACK
 }
 
-// Definição do canal de vendas
 enum EventChannel {
-  REMOTE // Remoto (chamada, online)
-  F2F    // Face-a-face (presencial)
+  REMOTE
+  F2F
 }
 
-// Definição do status do evento/processo
 enum EventStatus {
-  PROJECT // Em andamento / pipeline
-  CLOSED  // Concluído (seja venda ou callback final)
-  LOST    // Oportunidade perdida / cancelada
+  PROJECT
+  CLOSED
+  LOST
 }
-
-// --- MODELOS ---
 
 model User {
-  // Campos obrigatórios (ID, Autenticação, Identidade)
-  id       Int      @id @default(autoincrement())
-  userId   String   @unique // Identificador externo ou legível
-  email    String   @unique
-  pwd      String   // Password (deve ser hashada, mas Prisma armazena a string)
-  
-  // Detalhes Pessoais
-  frst_name String
-  lst_name  String
-  phone     String? // O '?' torna o campo opcional
-  avatar    String?
-  desc      String?
-  
-  // Status e Papéis
-  role      UserRole  @default(OPERATOR)
-  is_active Boolean   @default(true)
-  
-  // Datas
+  id         Int      @id @default(autoincrement())
+  userId     String   @unique // Este é o ID do Clerk
+  internalId String   @unique @db.VarChar(4) // O teu ID de 4 letras (ex: JOSE)
+  email      String   @unique
+  frst_name  String
+  lst_name   String
+  phone      String?
+  avatar     String?
+  desc       String?
+  role       UserRole  @default(OPERATOR)
+  is_active  Boolean   @default(true)
   created_at DateTime @default(now())
+  events     Event[]
 
-  // RELAÇÕES
-  // Um Utilizador pode ter múltiplos Eventos
-  events Event[]
+  @@index([internalId])
 }
 
 model Client {
-  // Campos obrigatórios
-  id       Int      @id @default(autoincrement())
-  clientId String   @unique // Identificador externo ou legível
-
-  // Detalhes Pessoais e Contacto
+  id        Int      @id @default(autoincrement())
   frst_name String
   lst_name  String?
-  phone     String
-  email     String?  @unique // Opcional
-  
-  // Localização
+  phone     String   @unique
+  email     String?  @unique
   address   String
-  lat       Float?  // Latitude
-  long      Float?  // Longitude
+  lat       Float?
+  long      Float?
+  event     Event?
 
-  // RELAÇÕES
-  // Um Cliente SÓ PODE ter um Evento (a relação é 1:1, forçada pelo campo 'event' no Event)
-  event Event?
+  @@index([phone])
 }
 
 model Event {
-  // Campos obrigatórios
   id           Int        @id @default(autoincrement())
-  event_id     String     @unique // Identificador externo ou legível
-  
-  // RELAÇÕES (Chaves Estrangeiras)
-  // 1. O Evento pertence a um Utilizador (Muitos para Um)
+  event_id     String     @unique 
   userId       Int
   user         User       @relation(fields: [userId], references: [id])
-  
-  // 2. O Evento refere-se a um Cliente
-  clientId     Int        @unique // <--- ESTE É O CAMPO CRÍTICO: Garante que um Cliente só aparece aqui UMA VEZ.
+  clientId     Int        @unique 
   client       Client     @relation(fields: [clientId], references: [id])
-  
-  // DETALHES DO EVENTO
   type         EventType    @default(SALE)
   channel      EventChannel @default(REMOTE)
   status       EventStatus  @default(PROJECT)
-  obs          String?      // Observações (Opcional)
-
-  // DATAS
-  Scheduled    DateTime? // Data/Hora agendada para o evento (opcional)
+  obs          String?      @db.Text
+  Scheduled    DateTime?
   created_at   DateTime @default(now())
   updated_at   DateTime @updatedAt
-  calledback_at DateTime? // Hora/Data do último callback, se aplicável (opcional)
+  calledback_at DateTime?
+
+  @@index([status])
 }

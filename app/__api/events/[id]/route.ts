@@ -7,6 +7,7 @@ export async function GET(
 ) {
   try {
     const { id } = await params
+    const {userId} = await params
     const eventId = parseInt(id, 10)
 
     if (isNaN(eventId)) {
@@ -32,6 +33,7 @@ export async function GET(
         user: {
           select: {
             id: true,
+            userId: true,
             frst_name: true,
             lst_name: true,
             role: true,
@@ -43,7 +45,7 @@ export async function GET(
     if (!event) {
       return NextResponse.json(
         { error: `Evento com ID ${eventId} não encontrado` },
-        { status: 404 }
+        { status: 404 } 
       )
     }
 
@@ -58,6 +60,7 @@ export async function GET(
       obs: event.obs,
       operator: {
         id: event.user.id,
+        userId: event.user.userId,
         frst_name: event.user.frst_name,
         lst_name: event.user.lst_name,
         role: event.user.role,

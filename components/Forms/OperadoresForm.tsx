@@ -4,8 +4,11 @@ import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import InputField from '../InputField';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useTransition } from 'react';
 import { useUser } from '@clerk/nextjs';
+import { createSystemUser, updateSystemUser, getOperatorById } from '@/lib/actions/user.actions';
+import { toast } from 'sonner';
+import { UserRole } from '@prisma/client';
 
 // Schema with password for CREATE
 const createSchema = z.object({
@@ -23,7 +26,7 @@ const editSchema = z.object({
   name: z.string().min(3, { message: "Mínimo 3 caracteres" }),
   apelido: z.string().min(3, { message: "Mínimo 3 caracteres" }),
   phone: z.string().min(8, { message: "Número obrigatório" }),
-  password: z.string().min(8, { message: "Mínimo 8 caracteres" }).optional().or(z.literal('')), // ✅ Password opcional no edit
+  password: z.string().min(8, { message: "Mínimo 8 caracteres" }).optional().or(z.literal('')),
 });
 
 type CreateFormValues = z.infer<typeof createSchema>;
@@ -31,7 +34,7 @@ type EditFormValues = z.infer<typeof editSchema>;
 
 type FetchedUserData = {
   id: number;
-  userId: string; // ✅ Clerk ID
+  userId: string;
   email: string;
   frst_name: string;
   lst_name: string;
@@ -46,22 +49,19 @@ const OperadoresForm = ({
   data, 
   tableLabel, 
   formId,
-  userId, // ✅ Este userId é o Clerk ID (string)
+  userId,
 }: { 
   type: "create" | "edit"; 
   data?: unknown; 
   tableLabel: string;
   formId: string;
-  userId?: string; // ✅ Mudado de number para string
+  userId?: string;
 }) => {
   
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPending, startTransition] = useTransition();
   const [userData, setUserData] = useState<FetchedUserData | null>(null);
   const [isLoadingUser, setIsLoadingUser] = useState(false);
   const { user: currentUser } = useUser();
-
-  // ✅ DEBUG PROPS
-  console.log('🎨 OperadoresForm props:', { type, userId, typeof_userId: typeof userId, formId });
 
   const {
     register,
@@ -72,42 +72,29 @@ const OperadoresForm = ({
     resolver: zodResolver(type === "create" ? createSchema : editSchema),
   });
 
-  // ✅ FETCH USER DATA (Edit Mode) - IGUAL AO VENDAS FORM
+  // ✅ FETCH USER DATA usando Server Action (Edit Mode)
   useEffect(() => {
     if (type === "edit" && userId) {
-      console.log('🔍 Iniciando fetch para userId:', userId, 'Type:', typeof userId);
-      
       const fetchUserData = async () => {
         setIsLoadingUser(true);
         try {
-          const response = await fetch(`/api/operators/${userId}`);
+          const data = await getOperatorById(userId);
           
-          console.log('📡 Response status:', response.status);
-          
-          if (!response.ok) {
+          if (!data) {
             throw new Error(`Utilizador com ID ${userId} não encontrado.`);
           }
           
-          const data: FetchedUserData = await response.json();
-          console.log('✅ Dados recebidos:', data);
-          
-          setUserData(data);
+          setUserData(data as FetchedUserData);
 
-          // ✅ PRE-FILL FORM FIELDS
+          // Pre-fill form fields
           setValue('name', data.frst_name);
           setValue('apelido', data.lst_name);
           setValue('email', data.email);
           setValue('phone', data.phone || '');
 
-          console.log('✅ Campos preenchidos:', {
-            name: data.frst_name,
-            apelido: data.lst_name,
-            email: data.email,
-            phone: data.phone,
-          });
-
         } catch (error) {
           console.error("❌ Erro ao carregar utilizador:", error);
+          toast.error("Erro ao carregar dados do utilizador");
           setUserData(null);
         } finally {
           setIsLoadingUser(false);
@@ -115,90 +102,54 @@ const OperadoresForm = ({
       };
       
       fetchUserData();
-    } else if (type === "edit" && !userId) {
-      console.error('❌ ERRO CRÍTICO: userId é undefined em modo edit!');
-      console.error('Props recebidas:', { type, userId, formId });
     }
   }, [type, userId, setValue]);
 
   const onSubmit = handleSubmit(async (formData) => {
-    console.log('📤 Submitting form:', { type, userId, formData });
-    setIsSubmitting(true);
-    
-    try {
-      let response;
-      let endpoint = '';
+    startTransition(async () => {
+      try {
+        let result;
 
-      if (type === "create") {
-        endpoint = '/api/users';
-        console.log('➕ Creating new user...');
-        console.log('📍 Endpoint:', endpoint);
-        console.log('📦 Payload:', formData);
-        
-        response = await fetch(endpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(formData),
-        });
-      } else {
-        endpoint = `/api/operators/${userId}`;
-        console.log('✏️ Updating user:', userId);
-        console.log('📍 Endpoint:', endpoint);
-        
-        // ✅ Só envia password se foi preenchida
-        const updateData: any = {
-          name: formData.name,
-          apelido: formData.apelido,
-          email: formData.email,
-          phone: formData.phone,
-        };
-        
-        if (formData.password && formData.password.trim() !== '') {
-          updateData.password = formData.password;
-          console.log('🔑 Password será atualizada');
+        if (type === "create") {
+          // ✅ CREATE usando Server Action
+          result = await createSystemUser({
+            email: formData.email,
+            name: formData.name,
+            apelido: formData.apelido,
+            phone: formData.phone,
+            password: formData.password as string,
+            role: formData.role as UserRole,
+          });
+        } else {
+          // ✅ UPDATE usando Server Action
+          if (!userId) {
+            toast.error("ID do utilizador não fornecido");
+            return;
+          }
+
+          result = await updateSystemUser(userId, {
+            name: formData.name,
+            apelido: formData.apelido,
+            email: formData.email,
+            phone: formData.phone,
+            password: formData.password,
+          });
         }
-        
-        console.log('📦 Payload:', updateData);
-        
-        response = await fetch(endpoint, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(updateData),
-        });
+
+        if (result?.error) {
+          toast.error(result.error);
+        } else {
+          toast.success(result?.message || `${type === "create" ? "Criado" : "Atualizado"} com sucesso!`);
+          window.location.reload();
+        }
+
+      } catch (error) {
+        console.error('❌ Erro no submit:', error);
+        toast.error('Erro desconhecido');
       }
-
-      console.log('📡 Response status:', response.status);
-      console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
-
-      // ✅ Verifica se é JSON antes de parsear
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        const textResponse = await response.text();
-        console.error('❌ Response não é JSON:', textResponse.substring(0, 200));
-        throw new Error('Servidor retornou HTML em vez de JSON. Verifica os logs do terminal.');
-      }
-
-      const result = await response.json();
-      console.log('📥 Response JSON:', result);
-
-      if (!response.ok) {
-        throw new Error(result?.error || `Erro ${response.status}: ${response.statusText}`);
-      }
-
-      console.log('✅ Sucesso:', result);
-      alert(`${type === "create" ? "Criado" : "Atualizado"} com sucesso!`);
-      window.location.reload();
-
-    } catch (error) {
-      console.error('❌ Erro no submit:', error);
-      console.error('❌ Stack trace:', error instanceof Error ? error.stack : 'N/A');
-      alert(`Erro: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
-    } finally {
-      setIsSubmitting(false);
-    }
+    });
   });
 
-  // Get creator name
   const creatorName = currentUser 
     ? `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() 
     : 'Admin';
@@ -206,11 +157,10 @@ const OperadoresForm = ({
   return (
     <form id={formId} className="w-full grid grid-cols-1 gap-8 lg:grid-cols-3" onSubmit={onSubmit}>
       
-      {/* ERROR ALERT - userId undefined */}
+      {/* ERROR ALERT */}
       {type === "edit" && !userId && (
         <div className="lg:col-span-3 p-4 bg-red-100 border border-red-400 rounded-md">
-          <p className="text-red-800 font-bold">⚠️ ERRO: userId não foi passado para o formulário!</p>
-          <p className="text-red-600 text-sm mt-2">O FormModal não está a passar o userId corretamente.</p>
+          <p className="text-red-800 font-bold">⚠️ ERRO: userId não foi passado!</p>
         </div>
       )}
 
@@ -224,7 +174,7 @@ const OperadoresForm = ({
         </div>
       </div>
 
-      {/* USER ID SECTION (Edit Mode Only) */}
+      {/* USER INFO (Edit Mode) */}
       {type === "edit" && (
         <div className="lg:col-span-3">
           <p className="text-xs text-gray-500 font-medium mb-1">Informação do Utilizador:</p>
@@ -262,7 +212,7 @@ const OperadoresForm = ({
         </div>
       )}
 
-      {/* CURRENT ROLE SECTION (Edit Mode) */}
+      {/* ROLE (Edit Mode) */}
       {type === "edit" && userData && (
         <div className="lg:col-span-3">
           <p className="text-xs text-gray-500 font-medium mb-1">Role Atual:</p>
@@ -280,36 +230,12 @@ const OperadoresForm = ({
       </span>
 
       {/* FORM FIELDS */}
-      <InputField 
-        label="Nome" 
-        name="name" 
-        register={register} 
-        error={errors.name} 
-        inputProps={{}} 
-      />
-      <InputField 
-        label="Apelido" 
-        name="apelido" 
-        register={register} 
-        error={errors.apelido} 
-        inputProps={{}} 
-      />
-      <InputField 
-        label="Email" 
-        name="email" 
-        register={register} 
-        error={errors.email} 
-        inputProps={{ type: "email" }} 
-      />
-      <InputField 
-        label="Telefone" 
-        name="phone" 
-        register={register} 
-        error={errors.phone} 
-        inputProps={{}} 
-      />
+      <InputField label="Nome" name="name" register={register} error={errors.name} inputProps={{}} />
+      <InputField label="Apelido" name="apelido" register={register} error={errors.apelido} inputProps={{}} />
+      <InputField label="Email" name="email" register={register} error={errors.email} inputProps={{ type: "email" }} />
+      <InputField label="Telefone" name="phone" register={register} error={errors.phone} inputProps={{}} />
 
-      {/* PASSWORD FIELD - CREATE AND EDIT */}
+      {/* PASSWORD */}
       <InputField 
         label={type === "create" ? "Password" : "Nova Password (opcional)"}
         name="password" 
@@ -321,7 +247,7 @@ const OperadoresForm = ({
         }} 
       />
 
-      {/* ROLE SELECTION - CREATE ONLY */}
+      {/* ROLE (Create Mode) */}
       {type === "create" && (
         <div className="lg:col-span-3">
           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -343,51 +269,8 @@ const OperadoresForm = ({
         </div>
       )}
 
-      {/* DEBUG DISPLAY (Edit Mode) */}
-      {type === "edit" && userData && (
-        <div className="lg:col-span-3 p-3 bg-blue-50 rounded-md text-sm space-y-2">
-          <p className="font-bold text-black mb-2">🔍 Debug - Dados do Fetch:</p>
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            <div>
-              <span className="text-gray-600">DB ID:</span>
-              <span className="text-black font-semibold ml-2">{userData.id}</span>
-            </div>
-            <div>
-              <span className="text-gray-600">Clerk ID:</span>
-              <span className="text-black font-semibold ml-2">{userData.userId}</span>
-            </div>
-            <div>
-              <span className="text-gray-600">Nome:</span>
-              <span className="text-black font-semibold ml-2">{userData.frst_name}</span>
-            </div>
-            <div>
-              <span className="text-gray-600">Apelido:</span>
-              <span className="text-black font-semibold ml-2">{userData.lst_name}</span>
-            </div>
-            <div>
-              <span className="text-gray-600">Email:</span>
-              <span className="text-black font-semibold ml-2">{userData.email}</span>
-            </div>
-            <div>
-              <span className="text-gray-600">Telefone:</span>
-              <span className="text-black font-semibold ml-2">{userData.phone || 'N/A'}</span>
-            </div>
-            <div>
-              <span className="text-gray-600">Role:</span>
-              <span className="text-black font-semibold ml-2">{userData.role}</span>
-            </div>
-            <div>
-              <span className="text-gray-600">Status:</span>
-              <span className={`font-semibold ml-2 ${userData.is_active ? 'text-green-600' : 'text-red-600'}`}>
-                {userData.is_active ? 'Ativo' : 'Inativo'}
-              </span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* LOADING INDICATOR */}
-      {isSubmitting && (
+      {/* LOADING */}
+      {isPending && (
         <div className="lg:col-span-3 text-center">
           <p className="text-purple-600 font-semibold">A guardar...</p>
         </div>

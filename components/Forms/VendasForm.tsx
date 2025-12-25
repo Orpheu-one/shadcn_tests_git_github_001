@@ -3,10 +3,13 @@
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import React, { useState, useEffect, useCallback } from 'react'; 
+import React, { useState, useEffect, useCallback, useTransition } from 'react'; 
 import InputField from '../InputField';  
 import DateTime from '../DateTime';
-import VendasSwitches, { VendaStatus } from '../VendasSwitches'; 
+import VendasSwitches, { VendaStatus } from '../VendasSwitches';
+import { createEvent, updateEvent, getEventById } from '@/lib/actions/user.actions';
+import { toast } from 'sonner';
+import { EventType, EventChannel, EventStatus } from '@prisma/client';
 
 // --- TYPES ---
 type FetchedOperator = {
@@ -34,11 +37,8 @@ type FetchedEventData = {
   };
 }
 
-const EVENT_OPTIONS = ["Venda", "Callback"]; 
-
 // --- ZOD SCHEMA ---
 const schema = z.object({
-  event: z.enum(EVENT_OPTIONS as [string, ...string[]], { message: "Escolhe o evento" }).optional(), 
   name: z.string().min(3, { message: "O nome do Cliente é obrigatório" }),
   apelido: z.string().min(3, { message: "O apelido do Cliente é obrigatório" }),
   phone: z.string().min(8, { message: "Número do Cliente é obrigatório" }),
@@ -50,23 +50,23 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
-// --- COMPONENT ---
 const VendasForm = ({ 
   type, 
   data, 
   tableLabel, 
   formId,
-  eventId, // NEW: Event ID for edit mode
-  operatorId = 1, // Fallback for create mode
+  eventId,
+  operatorId = 1,
 }: { 
   type: "create" | "edit"; 
   data?: unknown; 
   tableLabel: string;
   formId: string;
-  eventId?: number; // Optional, only for edit
+  eventId?: number;
   operatorId?: number;
 }) => {
 
+  const [isPending, startTransition] = useTransition();
   const [vendaStatus, setVendaStatus] = useState<VendaStatus>({
     tipo: 'Venda',
     modalidade: 'F2F',
@@ -89,20 +89,19 @@ const VendasForm = ({
     resolver: zodResolver(schema),
   });
 
-  // FETCH EVENT DATA (Edit Mode)
+  // ✅ FETCH EVENT DATA usando Server Action (Edit Mode)
   useEffect(() => {
     if (type === "edit" && eventId) {
       const fetchEventData = async () => {
         setIsLoadingEvent(true);
         try {
-          const response = await fetch(`/api/events/${eventId}`);
+          const data = await getEventById(eventId);
           
-          if (!response.ok) {
+          if (!data) {
             throw new Error(`Evento com ID ${eventId} não encontrado.`);
           }
           
-          const data: FetchedEventData = await response.json();
-          setEventData(data);
+          setEventData(data as FetchedEventData);
 
           // Pre-fill form fields
           setValue('name', data.client.frst_name);
@@ -135,6 +134,7 @@ const VendasForm = ({
 
         } catch (error) {
           console.error("Erro ao carregar evento:", error);
+          toast.error("Erro ao carregar dados do evento");
           setEventData(null);
         } finally {
           setIsLoadingEvent(false);
@@ -145,16 +145,78 @@ const VendasForm = ({
     }
   }, [type, eventId, setValue]);
 
-  const onSubmit = handleSubmit((formData) => {
-    console.log("Vendas Submit:", {
-      ...formData,
-      eventId: eventId,
-      userId: eventData?.operator.id || operatorId,
-      vendaStatus: vendaStatus,
+  const onSubmit = handleSubmit(async (formData) => {
+    startTransition(async () => {
+      try {
+        // Map venda status to Prisma enums
+        const typeMap: Record<string, EventType> = {
+          'Venda': 'SALE',
+          'Callback': 'CALLBACK',
+        };
+        const channelMap: Record<string, EventChannel> = {
+          'F2F': 'F2F',
+          'Remoto': 'REMOTE',
+        };
+        const statusMap: Record<string, EventStatus> = {
+          'Projecto': 'PROJECT',
+          'Fechado': 'CLOSED',
+          'Perdido': 'LOST',
+        };
+
+        let result;
+
+        if (type === "create") {
+          // ✅ CREATE usando Server Action
+          result = await createEvent({
+            userId: operatorId,
+            clientData: {
+              frst_name: formData.name,
+              lst_name: formData.apelido,
+              phone: formData.phone,
+              email: formData.email || undefined,
+              address: formData.address,
+            },
+            type: typeMap[vendaStatus.tipo],
+            channel: channelMap[vendaStatus.modalidade],
+            status: statusMap[vendaStatus.status],
+            obs: formData.obs,
+          });
+        } else {
+          // ✅ UPDATE usando Server Action
+          if (!eventId) {
+            toast.error("ID do evento não fornecido");
+            return;
+          }
+
+          result = await updateEvent(eventId, {
+            clientData: {
+              frst_name: formData.name,
+              lst_name: formData.apelido,
+              phone: formData.phone,
+              email: formData.email || undefined,
+              address: formData.address,
+            },
+            type: typeMap[vendaStatus.tipo],
+            channel: channelMap[vendaStatus.modalidade],
+            status: statusMap[vendaStatus.status],
+            obs: formData.obs,
+          });
+        }
+
+        if (result?.error) {
+          toast.error(result.error);
+        } else {
+          toast.success(result?.message || `${type === "create" ? "Criada" : "Atualizada"} com sucesso!`);
+          window.location.reload();
+        }
+
+      } catch (error) {
+        console.error('❌ Erro no submit:', error);
+        toast.error('Erro desconhecido');
+      }
     });
   });
 
-  // Get operator from event data (edit) or use operatorId (create)
   const currentOperator = eventData?.operator || null;
   const displayOperatorId = currentOperator?.id || operatorId;
 
@@ -170,7 +232,7 @@ const VendasForm = ({
         </div>
       </div>
 
-      {/* EVENT ID SECTION (Edit Mode Only) */}
+      {/* EVENT ID (Edit Mode) */}
       {type === "edit" && (
         <div className="lg:col-span-3">
           <p className="text-xs text-gray-500 font-medium mb-1">ID do Evento:</p>
@@ -179,12 +241,8 @@ const VendasForm = ({
           ) : eventData ? (
             <div className="p-2 bg-gray-50 rounded-md flex justify-between items-center">
               <div>
-                <span className="text-sm font-semibold text-black">
-                  #{eventData.eventId}
-                </span>
-                <span className="text-xs text-gray-500 ml-2">
-                  ({eventData.eventIdString})
-                </span>
+                <span className="text-sm font-semibold text-black">#{eventData.eventId}</span>
+                <span className="text-xs text-gray-500 ml-2">({eventData.eventIdString})</span>
               </div>
               <span className="text-xs text-gray-500">
                 Criado: {new Date(eventData.createdAt).toLocaleString('pt-PT')}
@@ -196,7 +254,7 @@ const VendasForm = ({
         </div>
       )}
 
-      {/* OPERATOR SECTION */}
+      {/* OPERATOR */}
       <div className="lg:col-span-3">
         <p className="text-xs text-gray-500 font-medium mb-1">Operador Responsável:</p>
         {isLoadingEvent && type === "edit" ? (
@@ -209,9 +267,7 @@ const VendasForm = ({
             <span className="text-xs text-gray-500"> (ID: {currentOperator.id} - {currentOperator.role})</span>
           </div>
         ) : (
-          <p className="text-sm text-red-500">
-            ID: {displayOperatorId} (Criar modo - detalhes não carregados)
-          </p>
+          <p className="text-sm text-red-500">ID: {displayOperatorId} (Criar modo)</p>
         )}
       </div>
 
@@ -251,6 +307,13 @@ const VendasForm = ({
           inputProps={{}}
         />
       </div>
+
+      {/* LOADING */}
+      {isPending && (
+        <div className="lg:col-span-3 text-center">
+          <p className="text-purple-600 font-semibold">A guardar...</p>
+        </div>
+      )}
     </form>
   );
 };
