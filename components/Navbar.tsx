@@ -2,10 +2,8 @@
 
 import React, { useEffect } from 'react'
 import { UserButton, useUser } from "@clerk/nextjs"
-import { LogOut, MegaphoneIcon, MessageCircleMoreIcon, Settings, User } from "lucide-react"
+import { MegaphoneIcon, MessageCircleMoreIcon } from "lucide-react"
 import Link from "next/link"
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "./ui/dropdown-menu"
 import Image from "next/image"
 
 const Navbar = () => {
@@ -16,7 +14,7 @@ const Navbar = () => {
   }, [isLoaded, user])
 
   return (
-    <nav className='flex justify-between items-center px-4 py-2 bg-gray-200  dark:bg-gray-900 dark:text-slate-50'>
+    <nav className='flex justify-between items-center px-4 py-2 bg-gray-200  dark:bg-transparent dark:text-slate-100'>
       {/*LEFT SIDE*/}
       <div className="flex items-center justify-between flex-row gap-2">
         <Link href="/" className="flex">
@@ -29,18 +27,7 @@ const Navbar = () => {
 
       {/*MIDDLE SIDE*/}
       {/* Fixed logic block below: wrapped in {} and used valid JSX comments */}
-      {(() => {
-        try {
-          const { useUser: useUserInternal } = require('@clerk/nextjs')
-          const { user: userInt, isLoaded: isLoadedInt } = useUserInternal()
-          if (typeof window !== 'undefined') {
-            setTimeout(() => console.log('[Navbar Internal Debug]', { isLoadedInt, userInt }), 0)
-          }
-        } catch (e) {
-          // ignore
-        }
-        return null; // JSX requires a return value (even if null)
-      })()}
+      
 
       <div className="hidden md:flex items-center justify-left px-12 ring-[1px] ring-white rounded-full">
         <input

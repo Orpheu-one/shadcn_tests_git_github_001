@@ -89,7 +89,7 @@ const SideBar = () => {
   // Loading state
   if (!isLoaded) {
     return (
-      <div className="dark:bg-gray-900 p-4">
+      <div className="dark:bg-transparent p-4">
         <p className="text-white text-sm">A carregar menu...</p>
       </div>
     )
@@ -101,7 +101,7 @@ const SideBar = () => {
   )
 
   return (
-    <div className="dark:bg-gray-900">
+    <div className="dark:bg-transparent">
       {visibleItems.map((item) => (
         <div key={item.title} className="flex items-end-safe font-light text-sm">
           <a href={item.href} className="flex gap-2 py-4 text-sm text-white font-light">
