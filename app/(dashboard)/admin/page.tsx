@@ -10,7 +10,7 @@ const adminPage = () => {
   return (
     <div className='w-full flex gap-4 flex-col md:flex-row lg:flex-row'>
       {/*left side*/}
-      <div className="w-full lg:w-2/3 flex flex-col gap-8 dark:bg-gray-950">
+      <div className="w-full lg:w-2/3 flex flex-col gap-8 dark:bg-transparent rounded-lg">
         <div className="flex justify-content gap-4 flex-wrap">
           <UserCard type="administrador"/>
           <UserCard type="operador"/>
@@ -22,14 +22,14 @@ const adminPage = () => {
       <div className="flex gap-4 flex-col lg:flex-row ">
 
         {/*chart radial*/}
-          <div className="w-full flex lg:w-1/3 h-[400px] dark:bg-white p-4 rounded-lg">
+          <div className="w-full flex lg:w-1/3 h-[400px] dark:bg-neutral-400 p-4 rounded-lg">
 
             <ChartRadialVendas />
 
           </div>
         {/*chart 2*/}
 
-          <div className="flex w-full lg:w-2/3 h-[400px] dark:bg-white rounded-lg">
+          <div className="flex w-full lg:w-2/3 h-[400px] dark:bg-neutral-400 rounded-lg">
             <VendasTeams/>
 
           </div>
@@ -37,16 +37,16 @@ const adminPage = () => {
           
       {/*bottom chart*/}
       </div>
-      <div className="flex w-full h-[400px] dark:bg-white rounded-lg">
+      <div className="flex w-full h-[400px] dark:bg-neutral-400 rounded-lg">
           <TotalVendas/>
        </div>
 
       </div>
       {/*right side*/}
-      <div className="w-full flex lg:w-1/3 dark:bg-gray-950 flex-col gap-4 rounded-lg">
+      <div className="w-full flex lg:w-1/3 dark:bg-transparent flex-col gap-4 rounded-lg">
         <div className="w-full h-[400px] rounded-lg">
         <EventCalendar />
-        <div className="mt-4">
+        <div className="dark:bg-neutral-400 mt-4">
         <ListaVendas/> 
         </div>
         </div>

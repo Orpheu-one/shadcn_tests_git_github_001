@@ -48,7 +48,7 @@ const OperadoresPage = async ({ searchParams }: SearchProps) => {
   const renderRow = (item: UserWithEvents) => (
     <tr 
       key={item.id} 
-      className="border-b border-gray-500 even:bg-purple-300 hover:bg-purple-500"
+      className="border-b border-gray-500 even:bg-neutral-100 hover:bg-purple-300"
     >
       <td className="flex items-center gap-4 p-4">
         <Image 
@@ -106,7 +106,7 @@ const OperadoresPage = async ({ searchParams }: SearchProps) => {
   }
 
   return (
-    <div className='flex-1 bg-white p-4 rounded-lg m-4 mt-0'>
+    <div className='flex-1 bg-neutral-200 p-4 rounded-lg m-4 mt-0'>
       {/* TOP */}
       <div className="flex items-center justify-between">
         <h1 className="hidden md:block text-lg font-semibold text-black mt-4">

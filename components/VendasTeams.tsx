@@ -45,9 +45,9 @@ const data = [
 
 const VendasTeams = () => {
   return (
-  <div className='w-full bg-white p-4 rounded-lg'>
+  <div className='w-full bg-neutral-400 p-4 rounded-lg'>
       <div className="flex justify-between items-center ">
-        <h1 className="text-lg font-semibold text-gray-500 mb-4">Vendas Equipas por Semana</h1>
+        <h1 className="text-lg font-semibold text-neutral-900 mb-4">Vendas Equipas por Semana</h1>
         <Image src="/moreDark.png" alt="more" width={20} height={20} />
       </div>
       <div className="">

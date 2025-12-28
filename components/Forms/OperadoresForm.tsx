@@ -15,6 +15,7 @@ const createSchema = z.object({
   email: z.string().email({ message: "Insira um email válido" }),
   name: z.string().min(3, { message: "Mínimo 3 caracteres" }),
   apelido: z.string().min(3, { message: "Mínimo 3 caracteres" }),
+  internalId: z.string().min(4, { message: "A ID é obrigatória e tem 4 caracteres" }),
   phone: z.string().min(8, { message: "Número obrigatório" }),
   password: z.string().min(8, { message: "Mínimo 8 caracteres" }),
   role: z.enum(['OPERATOR', 'SUPERVISOR', 'D2D', 'ADMIN'], { message: "Escolha um role" }),
@@ -36,6 +37,7 @@ type FetchedUserData = {
   id: number;
   userId: string;
   email: string;
+  internalId: string;
   frst_name: string;
   lst_name: string;
   phone: string | null;
@@ -50,12 +52,16 @@ const OperadoresForm = ({
   tableLabel, 
   formId,
   userId,
+  internalId,
+  role,
 }: { 
   type: "create" | "edit"; 
   data?: unknown; 
   tableLabel: string;
   formId: string;
   userId?: string;
+  internalId?: string;
+  role: UserRole;
 }) => {
   
   const [isPending, startTransition] = useTransition();
@@ -152,7 +158,7 @@ const OperadoresForm = ({
 
   const creatorName = currentUser 
     ? `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() 
-    : 'Admin';
+    : `${internalId} ${role}`;
 
   return (
     <form id={formId} className="w-full grid grid-cols-1 gap-8 lg:grid-cols-3" onSubmit={onSubmit}>
@@ -232,6 +238,7 @@ const OperadoresForm = ({
       {/* FORM FIELDS */}
       <InputField label="Nome" name="name" register={register} error={errors.name} inputProps={{}} />
       <InputField label="Apelido" name="apelido" register={register} error={errors.apelido} inputProps={{}} />
+      <InputField label="ID Interno" name="internalId" register={register} error={errors.internalId} inputProps={{}} />
       <InputField label="Email" name="email" register={register} error={errors.email} inputProps={{ type: "email" }} />
       <InputField label="Telefone" name="phone" register={register} error={errors.phone} inputProps={{}} />
 
