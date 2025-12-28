@@ -4,16 +4,15 @@ import dynamic from "next/dynamic";
 import Image from "next/image";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useUser } from "@clerk/nextjs";
 import { deleteUserAction, deleteEventAction } from "@/lib/actions/user.actions";
 import { toast } from "sonner";
 
-// Imports dinâmicos
+// Dynamic imports
 const OperadoresForm = dynamic(() => import("./Forms/OperadoresForm"), { ssr: false });
 const VendasForm = dynamic(() => import("./Forms/VendasForm"), { ssr: false });
 
-// O dicionário agora cobre todas as variações para garantir que nunca retorne "Não encontrado"
 const forms: { [key: string]: (type: "create" | "edit", data: any, tableLabel: string, formId: string, id?: number, userId?: string) => JSX.Element } = {
-  // Agora aceita "operador" (singular) que é o que a tua página está a enviar
   operador: (type, data, tableLabel, formId, id, userId) => (
     <OperadoresForm type={type} tableLabel={tableLabel} formId={formId} userId={userId} />
   ),
@@ -36,22 +35,38 @@ const FormModal = ({ table, type, data, id, userId }: any) => {
   const bgColor = type === "create" ? "bg-purple-600" : type === "edit" ? "bg-blue-400" : "bg-red-500";
   const [open, setOpen] = useState(false);
   const router = useRouter();
+  const { user } = useUser();
+
+  // Check permissions for create action
+  const canCreate = () => {
+    if (type !== "create") return true;
+
+    const userRole = (user?.publicMetadata?.role as string)?.toLowerCase();
+    
+    // Allow admin and supervisor (lowercase as stored in Clerk)
+    return userRole === "admin" || userRole === "supervisor";
+  };
 
   const handleDelete = async () => {
     const tid = toast.loading("A eliminar...");
     try {
-      // Ajustado para reconhecer tanto 'vendas' como 'events'
       const isEvent = table === "vendas" || table === "events";
       const res = isEvent ? await deleteEventAction(Number(id)) : await deleteUserAction(userId);
-      
       if (res?.error) throw new Error(res.error);
-      
       toast.success("Eliminado!", { id: tid });
       setOpen(false);
       router.refresh();
     } catch (err: any) {
       toast.error(err.message, { id: tid });
     }
+  };
+
+  const handleOpenModal = () => {
+    if (!canCreate()) {
+      toast.error("Não tem permissões para criar utilizadores");
+      return;
+    }
+    setOpen(true);
   };
 
   const Form = () => {
@@ -74,14 +89,13 @@ const FormModal = ({ table, type, data, id, userId }: any) => {
       );
     }
 
-    // Verificação de segurança no dicionário
     const SelectedForm = forms[table];
 
     return SelectedForm ? (
       <>
         {SelectedForm(type, data, tableLabel, formId, id as number, userId)}
         <button form={formId} className="bg-purple-600 text-white p-2 rounded-md mt-4 w-full">
-            {type === "create" ? "Criar" : "Atualizar"}
+          {type === "create" ? "Criar" : "Atualizar"}
         </button>
       </>
     ) : (
@@ -95,7 +109,7 @@ const FormModal = ({ table, type, data, id, userId }: any) => {
     <>
       <button 
         className={`${size} flex items-center justify-center rounded-full ${bgColor}`} 
-        onClick={() => setOpen(true)}
+        onClick={handleOpenModal}
       >
         <Image src={`/${type}.png`} alt="" width={16} height={16} />
       </button>
