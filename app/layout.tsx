@@ -5,6 +5,7 @@ import {
 import { Geist, Geist_Mono } from "next/font/google"
 import Navbar from "@/components/Navbar";
 import "./globals.css";
+import { Toaster } from "sonner";
 
 
 const geistSans = Geist({
@@ -51,6 +52,7 @@ export default function RootLayout({
             <div className="p-4 flex-grow overflow-y-auto">
 
               {children}
+              <Toaster position="top-center" richColors closeButton />
 
             </div>
         </main>

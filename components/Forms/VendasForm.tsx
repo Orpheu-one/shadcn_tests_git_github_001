@@ -4,16 +4,19 @@ import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import React, { useState, useEffect, useCallback, useTransition } from 'react'; 
-import InputField from '../InputField';  
+import InputField from '../InputField'; 
 import DateTime from '../DateTime';
 import VendasSwitches, { VendaStatus } from '../VendasSwitches';
-import { createEvent, updateEvent, getEventById } from '@/lib/actions/user.actions';
+import { createEvent, updateEvent, getEventById, getOperatorsList } from '@/lib/actions/user.actions';
 import { toast } from 'sonner';
 import { EventType, EventChannel, EventStatus } from '@prisma/client';
+import { useUser } from '@clerk/nextjs';
 
 // --- TYPES ---
 type FetchedOperator = {
   id: number;
+  userId: string;
+  internalId: string;
   frst_name: string;
   lst_name: string;
   role: string;
@@ -39,12 +42,11 @@ type FetchedEventData = {
 
 // --- ZOD SCHEMA ---
 const schema = z.object({
-  name: z.string().min(3, { message: "O nome do Cliente é obrigatório" }),
-  apelido: z.string().min(3, { message: "O apelido do Cliente é obrigatório" }),
-  phone: z.string().min(8, { message: "Número do Cliente é obrigatório" }),
-  address: z.string().min(15, { message: "A morada do Cliente é obrigatória" }),
-  email: z.string().email({ message: "Insira um email válido" }).optional().or(z.literal('')),
-  genero: z.enum(["Masculino", "Feminino", "Prefiro não especificar"], { message: "Escolhe uma opção" }),
+  name: z.string().min(3, { message: "Nome obrigatório" }),
+  apelido: z.string().min(3, { message: "Apelido obrigatório" }),
+  phone: z.string().min(8, { message: "Número obrigatório" }),
+  address: z.string().min(15, { message: "Morada obrigatória" }),
+  email: z.string().email({ message: "Email inválido" }).optional().or(z.literal('')),
   obs: z.string().optional(), 
 });
 
@@ -52,20 +54,15 @@ type FormValues = z.infer<typeof schema>;
 
 const VendasForm = ({ 
   type, 
-  data, 
   tableLabel, 
   formId,
   eventId,
-  operatorId = 1,
 }: { 
   type: "create" | "edit"; 
-  data?: unknown; 
   tableLabel: string;
   formId: string;
   eventId?: number;
-  operatorId?: number;
 }) => {
-
   const [isPending, startTransition] = useTransition();
   const [vendaStatus, setVendaStatus] = useState<VendaStatus>({
     tipo: 'Venda',
@@ -73,13 +70,20 @@ const VendasForm = ({
     status: 'Projecto',
   });
 
-  const [eventData, setEventData] = useState<FetchedEventData | null>(null);
+  const [eventData, setEventData] = useState<FetchedEventData| null>(null);
   const [isLoadingEvent, setIsLoadingEvent] = useState(false);
+  const [operators, setOperators] = useState<any[]>([]);
+  const [selectedOperatorId, setSelectedOperatorId] = useState<string>('');
+  const { user: currentUser } = useUser();
+
+  const currentUserRole = currentUser?.publicMetadata?.role as string || 'N/A';
+  const currentUserName = `${currentUser?.firstName || ''} ${currentUser?.lastName || ''}`.trim() || 'N/A';
+  const isAdmin = currentUserRole.toLowerCase() === 'admin';
 
   const handleSwitchValuesChange = useCallback((values: VendaStatus) => {
     setVendaStatus(values);
   }, []);
-    
+
   const {
     register,
     handleSubmit,
@@ -89,21 +93,18 @@ const VendasForm = ({
     resolver: zodResolver(schema),
   });
 
-  // ✅ FETCH EVENT DATA usando Server Action (Edit Mode)
+  // Fetch EVENT DATA for EDIT mode & OPERATORS for CREATE (admin only)
   useEffect(() => {
     if (type === "edit" && eventId) {
       const fetchEventData = async () => {
         setIsLoadingEvent(true);
         try {
           const data = await getEventById(eventId);
-          
           if (!data) {
-            throw new Error(`Evento com ID ${eventId} não encontrado.`);
+            throw new Error(`Evento não encontrado.`);
           }
-          
           setEventData(data as FetchedEventData);
 
-          // Pre-fill form fields
           setValue('name', data.client.frst_name);
           setValue('apelido', data.client.lst_name || '');
           setValue('email', data.client.email || '');
@@ -111,7 +112,6 @@ const VendasForm = ({
           setValue('address', data.client.address);
           setValue('obs', data.obs || '');
 
-          // Pre-select switches
           const statusMap = {
             SALE: 'Venda' as const,
             CALLBACK: 'Callback' as const,
@@ -133,22 +133,41 @@ const VendasForm = ({
           });
 
         } catch (error) {
-          console.error("Erro ao carregar evento:", error);
+          console.error("❌ Erro ao carregar evento:", error);
           toast.error("Erro ao carregar dados do evento");
           setEventData(null);
         } finally {
           setIsLoadingEvent(false);
         }
       };
-      
       fetchEventData();
     }
-  }, [type, eventId, setValue]);
+
+    // Fetch operators for admin (CREATE mode only)
+    if (type === "create" && isAdmin) {
+      const fetchOperators = async () => {
+        try {
+          const data = await getOperatorsList();
+          setOperators(data);
+          // Set current user as default
+          if (currentUser?.id) {
+            setSelectedOperatorId(currentUser.id);
+          }
+        } catch (error) {
+          console.error("Erro ao carregar operadores:", error);
+        }
+      };
+      fetchOperators();
+    }
+  }, [type, eventId, setValue, isAdmin, currentUser]);
 
   const onSubmit = handleSubmit(async (formData) => {
+    console.log("🚀 Form submitted:", formData);
+    
+    const tid = toast.loading(type === "create" ? "A criar venda..." : "A atualizar venda...");
+
     startTransition(async () => {
       try {
-        // Map venda status to Prisma enums
         const typeMap: Record<string, EventType> = {
           'Venda': 'SALE',
           'Callback': 'CALLBACK',
@@ -166,9 +185,20 @@ const VendasForm = ({
         let result;
 
         if (type === "create") {
-          // ✅ CREATE usando Server Action
+          // Admin can select operator, others use self
+          const operatorClerkId = isAdmin && selectedOperatorId 
+            ? selectedOperatorId 
+            : currentUser?.id;
+
+          if (!operatorClerkId) {
+            toast.error("Utilizador não autenticado", { id: tid });
+            return;
+          }
+
+          console.log("📝 Creating event for Clerk userId:", operatorClerkId);
+
           result = await createEvent({
-            userId: operatorId,
+            clerkUserId: operatorClerkId,
             clientData: {
               frst_name: formData.name,
               lst_name: formData.apelido,
@@ -181,12 +211,15 @@ const VendasForm = ({
             status: statusMap[vendaStatus.status],
             obs: formData.obs,
           });
+
+          console.log("✅ Create result:", result);
         } else {
-          // ✅ UPDATE usando Server Action
           if (!eventId) {
-            toast.error("ID do evento não fornecido");
+            toast.error("ID do evento não fornecido", { id: tid });
             return;
           }
+
+          console.log("📝 Updating event:", eventId);
 
           result = await updateEvent(eventId, {
             clientData: {
@@ -201,29 +234,34 @@ const VendasForm = ({
             status: statusMap[vendaStatus.status],
             obs: formData.obs,
           });
+
+          console.log("✅ Update result:", result);
         }
 
         if (result?.error) {
-          toast.error(result.error);
+          console.error("❌ Error:", result.error);
+          toast.error(result.error, { id: tid });
         } else {
-          toast.success(result?.message || `${type === "create" ? "Criada" : "Atualizada"} com sucesso!`);
-          window.location.reload();
+          toast.success(result?.message || "Operação concluída!", { id: tid });
+          
+          setTimeout(() => {
+            window.location.reload();
+          }, 1500);
         }
 
-      } catch (error) {
+      } catch (error: any) {
         console.error('❌ Erro no submit:', error);
-        toast.error('Erro desconhecido');
+        toast.error(error?.message || 'Erro desconhecido', { id: tid });
       }
     });
   });
 
-  const currentOperator = eventData?.operator || null;
-  const displayOperatorId = currentOperator?.id || operatorId;
+  const displayOperator = eventData?.operator || null;
 
   return (
-    <form id={formId} className="w-full grid grid-cols-1 gap-8 lg:grid-cols-3" onSubmit={onSubmit}>
-      
-      <div className="lg:col-span-3 flex justify-between items-center mb-4">
+    <form id={formId} className="w-full grid grid-cols-1 gap-6 lg:grid-cols-3" onSubmit={onSubmit}>
+      {/* HEADER */}
+      <div className="lg:col-span-3 flex justify-between items-center mb-2">
         <h1 className="text-xl font-semibold text-gray-800">
           {type === "create" ? "Criar" : "Editar"} {tableLabel}
         </h1>
@@ -232,21 +270,24 @@ const VendasForm = ({
         </div>
       </div>
 
-      {/* EVENT ID (Edit Mode) */}
+      {/* EVENT INFO (Edit Mode) */}
       {type === "edit" && (
         <div className="lg:col-span-3">
-          <p className="text-xs text-gray-500 font-medium mb-1">ID do Evento:</p>
+          <p className="text-xs text-gray-500 font-medium mb-1">Informação do Evento:</p>
           {isLoadingEvent ? (
             <p className="text-sm text-gray-500">A carregar...</p>
           ) : eventData ? (
-            <div className="p-2 bg-gray-50 rounded-md flex justify-between items-center">
-              <div>
-                <span className="text-sm font-semibold text-black">#{eventData.eventId}</span>
-                <span className="text-xs text-gray-500 ml-2">({eventData.eventIdString})</span>
+            <div className="p-3 bg-gray-50 rounded-md space-y-2">
+              <div className="flex justify-between items-center">
+                <div>
+                  <span className="text-xs text-gray-500">Event ID:</span>
+                  <span className="text-sm font-semibold text-gray-800 ml-2">#{eventData.eventId}</span>
+                  <span className="text-xs text-gray-500 ml-2">({eventData.eventIdString})</span>
+                </div>
+                <span className="text-xs text-gray-500">
+                  Criado: {new Date(eventData.createdAt).toLocaleString('pt-PT')}
+                </span>
               </div>
-              <span className="text-xs text-gray-500">
-                Criado: {new Date(eventData.createdAt).toLocaleString('pt-PT')}
-              </span>
             </div>
           ) : (
             <p className="text-sm text-red-500">Erro ao carregar evento</p>
@@ -254,47 +295,114 @@ const VendasForm = ({
         </div>
       )}
 
-      {/* OPERATOR */}
+      {/* OPERATOR INFO */}
       <div className="lg:col-span-3">
         <p className="text-xs text-gray-500 font-medium mb-1">Operador Responsável:</p>
-        {isLoadingEvent && type === "edit" ? (
+        {type === "edit" && isLoadingEvent ? (
           <p className="text-sm text-gray-500">A carregar...</p>
-        ) : currentOperator ? (
-          <div className="p-2 bg-gray-50 rounded-md">
-            <span className="text-sm font-semibold text-black"> 
-              {currentOperator.frst_name} {currentOperator.lst_name} 
+        ) : displayOperator ? (
+          <div className="p-3 bg-gray-50 rounded-md">
+            <span className="text-sm font-semibold text-gray-800">
+              {displayOperator.frst_name} {displayOperator.lst_name}
             </span>
-            <span className="text-xs text-gray-500"> (ID: {currentOperator.id} - {currentOperator.role})</span>
+            <span className="text-xs text-gray-500 ml-2">
+              (ID: {displayOperator.internalId} - {displayOperator.role})
+            </span>
+          </div>
+        ) : type === "create" && isAdmin && operators.length > 0 ? (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Selecionar Operador
+            </label>
+            <select
+              value={selectedOperatorId}
+              onChange={(e) => setSelectedOperatorId(e.target.value)}
+              className="w-full px-2 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm text-gray-800 bg-white"
+            >
+              <option value="">Selecione...</option>
+              {operators.map((op) => (
+                <option key={op.userId} value={op.userId}>
+                  {op.frst_name} {op.lst_name} ({op.internalId})
+                </option>
+              ))}
+            </select>
           </div>
         ) : (
-          <p className="text-sm text-red-500">ID: {displayOperatorId} (Criar modo)</p>
+          <div className="p-3 bg-gray-50 rounded-md">
+            <span className="text-sm font-semibold text-gray-800">{currentUserName}</span>
+            <span className="text-xs text-gray-500 ml-2 capitalize">({currentUserRole})</span>
+          </div>
         )}
       </div>
 
-      <span className="text-xs text-gray-500 font-medium lg:col-span-3 mt-4">Tipo de Evento e Status</span>
+      {/* SECTION: Event Type & Status */}
+      <span className="text-xs text-gray-500 font-medium lg:col-span-3 mt-2 border-b border-gray-200 pb-1">
+        Tipo de Evento e Status
+      </span>
+
       <div className="lg:col-span-3">
         <VendasSwitches 
           onValuesChange={handleSwitchValuesChange}
           initialValues={vendaStatus} 
         />
-        
-        {/* Debug Display */}
-        <div className="mt-4 p-3 bg-gray-200 rounded-md text-sm text-black">
-          <p className="font-bold">Status Atual da Venda:</p>
-          <p>- Tipo: <span className="text-xs text-gray-800">{vendaStatus.tipo}</span></p>
-          <p>- Modalidade: <span className="text-xs text-gray-800">{vendaStatus.modalidade}</span></p>
-          <p>- Status Final: <span className="text-xs text-gray-800">{vendaStatus.status}</span></p>
-        </div>
-      </div> 
+      </div>
+
+      {/* SECTION: Client Data */}
+      <span className="text-xs text-gray-500 font-medium lg:col-span-3 mt-2 border-b border-gray-200 pb-1">
+        Dados do Cliente
+      </span>
+
+      <InputField 
+        label="Nome do Cliente" 
+        name="name" 
+        register={register} 
+        error={errors.name} 
+        inputProps={{ className: "text-sm px-2 text-gray-800" }} 
+      />
       
-      <span className="text-xs text-gray-500 font-medium lg:col-span-3 mt-4">Dados do Cliente (Obrigatório)</span>
-      
-      <InputField label="Nome do Cliente" name="name" register={register} error={errors.name} inputProps={{}} />
-      <InputField label="Apelido do Cliente" name="apelido" register={register} error={errors.apelido} inputProps={{}} />
-      <InputField label="Email do Cliente" name="email" register={register} error={errors.email} inputProps={{ type: "email" }} />
-      <InputField label="Número de Telefone" name="phone" register={register} error={errors.phone} inputProps={{}} />
-      <InputField label="Morada do Cliente" name="address" register={register} error={errors.address} inputProps={{}} />
-      <InputField label="Género" name="genero" register={register} error={errors.genero} inputProps={{ placeholder: "Masculino / Feminino" }} />
+      <InputField 
+        label="Apelido do Cliente" 
+        name="apelido" 
+        register={register} 
+        error={errors.apelido} 
+        inputProps={{ className: "text-sm px-2 text-gray-800" }} 
+      />
+
+      <InputField 
+        label="Telefone" 
+        name="phone" 
+        register={register} 
+        error={errors.phone} 
+        inputProps={{ 
+          placeholder: "912345678",
+          className: "text-sm px-2 text-gray-800"
+        }} 
+      />
+
+      <InputField 
+        label="Email (Opcional)" 
+        name="email" 
+        register={register} 
+        error={errors.email} 
+        inputProps={{ 
+          type: "email",
+          placeholder: "exemplo@email.com",
+          className: "text-sm px-2 text-gray-800"
+        }} 
+      />
+
+      <div className="lg:col-span-2">
+        <InputField 
+          label="Morada do Cliente" 
+          name="address" 
+          register={register} 
+          error={errors.address} 
+          inputProps={{ 
+            placeholder: "Rua, Número, Código Postal, Cidade",
+            className: "text-sm px-2 text-gray-800"
+          }} 
+        />
+      </div>
 
       <div className="lg:col-span-3">
         <InputField 
@@ -303,15 +411,15 @@ const VendasForm = ({
           register={register} 
           error={errors.obs} 
           isTextArea={true} 
-          rows={3}          
-          inputProps={{}}
+          rows={3} 
+          inputProps={{ className: "text-sm px-2 text-gray-800" }}
         />
       </div>
 
       {/* LOADING */}
       {isPending && (
-        <div className="lg:col-span-3 text-center">
-          <p className="text-purple-600 font-semibold">A guardar...</p>
+        <div className="lg:col-span-3 text-center py-4">
+          <p className="text-purple-600 font-semibold text-sm">A processar...</p>
         </div>
       )}
     </form>
