@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import dynamic from "next/dynamic";
 import Image from "next/image";
@@ -29,36 +29,16 @@ const forms: {
   ) => JSX.Element 
 } = {
   operador: (type, tableLabel, formId, id, userId) => (
-    <OperadoresForm 
-      type={type} 
-      tableLabel={tableLabel} 
-      formId={formId} 
-      userId={userId}
-    />
+    <OperadoresForm type={type} tableLabel={tableLabel} formId={formId} userId={userId} />
   ),
   operadores: (type, tableLabel, formId, id, userId) => (
-    <OperadoresForm 
-      type={type} 
-      tableLabel={tableLabel} 
-      formId={formId} 
-      userId={userId}
-    />
+    <OperadoresForm type={type} tableLabel={tableLabel} formId={formId} userId={userId} />
   ),
   vendas: (type, tableLabel, formId, id, userId) => (
-    <VendasForm 
-      type={type} 
-      tableLabel={tableLabel} 
-      formId={formId} 
-      eventId={id}
-    />
+    <VendasForm type={type} tableLabel={tableLabel} formId={formId} eventId={id} />
   ),
   events: (type, tableLabel, formId, id, userId) => (
-    <VendasForm 
-      type={type} 
-      tableLabel={tableLabel} 
-      formId={formId} 
-      eventId={id}
-    />
+    <VendasForm type={type} tableLabel={tableLabel} formId={formId} eventId={id} />
   ),
 };
 
@@ -78,7 +58,7 @@ const FormModal = ({ table, type, data, id, userId }: any) => {
     return userRole === "admin" || userRole === "supervisor";
   };
 
-  // Fetch data for delete confirmation
+  // Fetch data for delete confirmation (CORRIGIDO PARA UTILIZADORES)
   useEffect(() => {
     if (type === "delete" && open) {
       const fetchDeleteData = async () => {
@@ -87,24 +67,26 @@ const FormModal = ({ table, type, data, id, userId }: any) => {
           const isEvent = table === "vendas" || table === "events";
           
           if (isEvent && id) {
-            // Fetch event data
             const eventData = await getEventById(Number(id));
             if (eventData) {
               setDeleteData({
                 type: 'event',
                 displayName: `${eventData.client.frst_name} ${eventData.client.lst_name || ''}`,
-                displayInfo: `ID: ${eventData.eventIdString} | Operador: ${eventData.operator.frst_name} ${eventData.operator.lst_name}`,
+                displayInfo: `ID: ${eventData.eventIdString} | Operador: ${eventData.operator.frst_name}`,
               });
             }
-          } else if (userId) {
-            // Fetch user data
-            const userData = await getOperatorById(userId);
-            if (userData) {
-              setDeleteData({
-                type: 'user',
-                displayName: `${userData.frst_name} ${userData.lst_name}`,
-                displayInfo: `ID: ${userData.internalId} | Email: ${userData.email} | Role: ${userData.role}`,
-              });
+          } else {
+            // Lógica robusta: tenta buscar por userId ou por id (DB)
+            const targetId = userId || id;
+            if (targetId) {
+              const userData = await getOperatorById(targetId);
+              if (userData) {
+                setDeleteData({
+                  type: 'user',
+                  displayName: `${userData.frst_name} ${userData.lst_name}`,
+                  displayInfo: `ID: ${userData.internalId} | Email: ${userData.email} | Role: ${userData.role}`,
+                });
+              }
             }
           }
         } catch (error) {
@@ -117,16 +99,20 @@ const FormModal = ({ table, type, data, id, userId }: any) => {
     }
   }, [type, open, table, id, userId]);
 
+  // Handle Delete (CORRIGIDO PARA UTILIZADORES)
   const handleDelete = async () => {
     const tid = toast.loading("A eliminar...");
     try {
       const isEvent = table === "vendas" || table === "events";
       
+      // Enviamos o userId se existir, senão enviamos o id. 
+      // A action findUser no servidor tratará de ambos.
       const res = isEvent 
         ? await deleteEventAction(Number(id)) 
-        : await deleteUserAction(userId);
+        : await deleteUserAction(userId || id);
         
       if (res?.error) throw new Error(res.error);
+      
       toast.success("Eliminado com sucesso!", { id: tid });
       setOpen(false);
       router.refresh();
@@ -156,7 +142,7 @@ const FormModal = ({ table, type, data, id, userId }: any) => {
           
           {isLoadingDelete ? (
             <div className="text-center py-8">
-              <p className="text-gray-600">A carregar dados...</p>
+              <p className="text-gray-600 animate-pulse">A carregar dados...</p>
             </div>
           ) : deleteData ? (
             <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4">
@@ -166,21 +152,21 @@ const FormModal = ({ table, type, data, id, userId }: any) => {
             </div>
           ) : (
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-              <p className="text-center text-gray-600">Não foi possível carregar os dados</p>
+              <p className="text-center text-gray-600">Não foi possível carregar os dados para eliminar.</p>
             </div>
           )}
 
           <div className="flex gap-3 justify-center mt-4">
             <button 
               onClick={() => setOpen(false)}
-              className="bg-gray-300 text-gray-800 py-2 px-6 rounded-md border-none hover:bg-gray-400 transition"
+              className="bg-gray-300 text-gray-800 py-2 px-6 rounded-md hover:bg-gray-400 transition"
             >
               Cancelar
             </button>
             <button 
               onClick={handleDelete}
               disabled={isLoadingDelete || !deleteData}
-              className="bg-red-600 text-white py-2 px-6 rounded-md border-none hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-red-600 text-white py-2 px-6 rounded-md hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Eliminar
             </button>
