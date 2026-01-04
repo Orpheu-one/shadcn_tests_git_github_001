@@ -51,7 +51,7 @@ const items = [
   {
     title: "Administradores",
     icon: UserStar,
-    href: "/lists/administradores",
+    href: "/lists/adminadores",
     allowedRoles: ["admin", "super-admin"], // Top level only
   },
   {

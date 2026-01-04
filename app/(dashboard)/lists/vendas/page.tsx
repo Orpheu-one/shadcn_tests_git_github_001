@@ -12,69 +12,53 @@ interface SearchProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
-// --- 1. TIPAGEM CORRIGIDA ---
-// Agora reflete exatamente o teu schema.prisma
 type EventWithRelations = Prisma.EventGetPayload<{
     include: { 
-        user: true;   // O Operador/Utilizador que fez a venda
-        client: true; // O Cliente que comprou
+        user: true;   
+        client: true; 
     };
 }>;
 
 const columns = [
-    {
-        header: "ID Venda", 
-        accessor: "event_id",
-    },
-    {
-        header: "Cliente", 
-        accessor: "client", 
-    },
-    {
-        header: "Operador", 
-        accessor: "user", 
-        className: "hidden md:table-cell",
-    },
-    {
-        header: "Contacto", 
-        accessor: "phone", 
-        className: "hidden md:table-cell",
-    },
-    {
-        header: "Status", 
-        accessor: "status", 
-        className: "hidden lg:table-cell", 
-    },
-    {
-        header: "Ações", 
-        accessor: "actions", 
-    },
+    { header: "ID Venda", accessor: "event_id" },
+    { header: "Cliente", accessor: "client" },
+    { header: "Operador", accessor: "user", className: "hidden md:table-cell" },
+    { header: "Contacto", accessor: "phone", className: "hidden md:table-cell" },
+    { header: "Status", accessor: "status", className: "hidden lg:table-cell" },
+    { header: "Ações", accessor: "actions" },
 ]
 
-// --- 2. RENDERIZAÇÃO DA LINHA CORRIGIDA ---
 const renderRow = (item: EventWithRelations) => (
     <tr 
         key={item.id} 
         className="border-b border-gray-500 even:bg-purple-50 hover:bg-purple-100 text-sm"
     >
         <td className="p-4">
-            {/* Mostra o ID legível da venda (ex: V-001) */}
-            <span className="font-bold">{item.event_id}</span>
+            <span className="font-bold text-black">{item.event_id}</span>
         </td>
         <td className="p-4">
             <div className="flex flex-col">
-                <span className="font-semibold">{item.client.frst_name} {item.client.lst_name}</span>
+                <span className="font-semibold text-black">{item.client.frst_name} {item.client.lst_name}</span>
                 <span className="text-xs text-gray-500">{item.client.email}</span>
             </div>
         </td>
-        <td className="hidden md:table-cell p-4">
-            {/* Aqui mostramos o nome do OPERADOR que fez a venda */}
+        <td className="hidden md:table-cell p-4 text-black">
             {item.user.frst_name} {item.user.lst_name}
         </td>
-        <td className="hidden md:table-cell p-4">{item.client.phone}</td>
+        <td className="hidden md:table-cell p-4 text-black">{item.client.phone}</td>
+        
+        {/* COLUNA STATUS CORRIGIDA COM CÓDIGO DE CORES */}
         <td className="hidden lg:table-cell p-4">
-            <span className={`px-2 py-1 rounded text-xs ${item.status === 'CLOSED' ? 'bg-green-200' : 'bg-yellow-200'}`}>
-                {item.status}
+            <span className={`px-2 py-1 rounded text-xs font-medium ${
+                item.status === 'CLOSED' 
+                    ? 'bg-green-200 text-green-800' 
+                    : item.status === 'LOST' 
+                    ? 'bg-red-200 text-red-800' 
+                    : 'bg-yellow-200 text-yellow-800'
+            }`}>
+                {item.status === 'PROJECT' ? 'PROJECTO' : 
+                 item.status === 'CLOSED' ? 'FECHADO' : 
+                 item.status === 'LOST' ? 'PERDIDO' : item.status}
             </span>
         </td> 
 
@@ -94,12 +78,10 @@ const EventsPage = async ({ searchParams }: SearchProps) => {
     const { page } = params;
     const p = page ? parseInt(page as string, 10) : 1;
 
-    // --- 3. QUERY CORRIGIDA ---
-    // Removemos o 'event: true' que causava erro, pois estamos na tabela Event
     const vendas = await prisma.event.findMany({
         include: {
-            user: true,   // Traz os dados do User (Operador)
-            client: true, // Traz os dados do Cliente
+            user: true,   
+            client: true, 
         },
         take: ITEMS_PER_PAGE,
         skip: (p - 1) * ITEMS_PER_PAGE,

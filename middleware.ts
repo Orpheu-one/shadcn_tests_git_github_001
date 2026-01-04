@@ -10,6 +10,8 @@ const isDashboardRoute = createRouteMatcher([
   '/lists(.*)',
 ])
 
+
+
 export default clerkMiddleware(async (auth, req) => {
   const { userId, sessionClaims } = await auth()
   const pathname = req.nextUrl.pathname
