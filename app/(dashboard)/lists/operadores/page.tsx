@@ -18,7 +18,7 @@ type UserWithEvents = Prisma.UserGetPayload<{
 
 const columns = [
   { header: "Info", accessor: "info" },
-  { header: "Connecta ID", accessor: "userId", className: "" },
+  { header: "Connecta ID", accessor: "internalId", className: "" },
   { header: "Nome (Frst_name)", accessor: "name", className: "hidden md:table-cell" },
   { header: "Telefone", accessor: "phone", className: "hidden md:table-cell" },
   { header: "Nível de Acesso (Role)", accessor: "role", className: "hidden lg:table-cell" }, 
@@ -59,11 +59,11 @@ const OperadoresPage = async ({ searchParams }: SearchProps) => {
           className="md:hidden xl:block w-10 h-10 rounded-full object-cover"
         />
         <div className="flex flex-col">
-          <h3 className="font-semibold">{item.userId}</h3>
+          <h3 className="font-semibold">{item.frst_name}</h3>
           <h4 className="text-xs text-gray-500">{item.email}</h4>
         </div>
       </td>
-      <td className="table-cell">{item.userId}</td>
+      <td className="table-cell">{item.internalId}</td>
       <td className="hidden md:table-cell">{item.frst_name}</td>
       <td className="hidden md:table-cell">{item.phone}</td>
       <td className="hidden md:table-cell">{item.role}</td>

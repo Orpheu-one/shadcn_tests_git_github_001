@@ -6,11 +6,19 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { deleteUserAction, deleteEventAction, getOperatorById, getEventById } from "@/lib/actions/user.actions";
+import {JSX} from "react";
 import { toast } from "sonner";
 
 // Dynamic imports
 const OperadoresForm = dynamic(() => import("./Forms/OperadoresForm"), { ssr: false });
 const VendasForm = dynamic(() => import("./Forms/VendasForm"), { ssr: false });
+const CallbacksForm = dynamic(() => import("./Forms/CallbacksForm"), { ssr: false });
+const DinanmicasForm = dynamic(() => import("./Forms/DinamicasForm"), { ssr: false });
+const SupervisoresForm = dynamic(() => import("./Forms/SupervisorsForm"), { ssr: false });
+const AdministradoresForm = dynamic(() => import("./Forms/AdministradoresForm"), { ssr: false });
+
+
+
 
 // Types para dados de confirmação
 type DeleteConfirmData = {

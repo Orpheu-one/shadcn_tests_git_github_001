@@ -51,19 +51,19 @@ const items = [
   {
     title: "Administradores",
     icon: UserStar,
-    href: "/lists/adminadores",
+    href: "/lists/administradores", // ⚠️ CORRIGIDO: era "adminadores"
     allowedRoles: ["admin", "super-admin"], // Top level only
   },
   {
     title: "Callbacks",
     icon: PhoneForwarded,
-    href: "/callbacks",
+    href: "/lists/callbacks",
     allowedRoles: ["admin", "super-admin", "supervisor", "operador"], // NOT vendedor
   },
   {
     title: "Dinamicas",
     icon: Smile,
-    href: "/dinamicas",
+    href: "/lists/dinamicas",
     allowedRoles: ["admin", "super-admin", "supervisor", "operador", "vendedor"], // All
   },
   {
@@ -82,7 +82,6 @@ const items = [
 
 const SideBar = () => {
   const { user, isLoaded } = useUser()
-  
   // Get user role from publicMetadata
   const userRole = user?.publicMetadata?.role as string | undefined
 
@@ -110,7 +109,7 @@ const SideBar = () => {
                 <item.icon />
               </TooltipTrigger>
               <TooltipContent>{item.title}</TooltipContent>
-            </Tooltip>                                   
+            </Tooltip> 
             <span className="mr-2 hidden lg:block cursor-pointer">{item.title}</span>
           </a>
         </div>

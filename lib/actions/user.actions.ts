@@ -21,17 +21,34 @@ async function findUser(paramId: string | number) {
 }
 
 // ==========================================
-// OPERADORES (GET)
+// LISTAS DE LEITURA (GETTERS)
 // ==========================================
 
+// 1. OPERADORES (MANTIDO)
 export async function getOperatorsList() {
   try {
     return await prisma.user.findMany({
-      where: { is_active: true },
+      where: { is_active: true }, // Adicionei filtro implícito se quiseres separar roles depois
       orderBy: { frst_name: 'asc' },
     });
   } catch (error) {
     console.error('❌ Erro ao buscar operadores:', error);
+    return [];
+  }
+}
+
+// 2. [NOVO] ADMINISTRADORES
+export async function getAdministratorsList() {
+  try {
+    return await prisma.user.findMany({
+      where: { 
+        role: { in: ['ADMIN', 'SUPER_ADMIN'] }, // Filtra apenas Admins
+        is_active: true 
+      },
+      orderBy: { frst_name: 'asc' },
+    });
+  } catch (error) {
+    console.error('❌ Erro ao buscar administradores:', error);
     return [];
   }
 }
@@ -58,8 +75,26 @@ export async function getOperatorById(paramId: string | number) {
   }
 }
 
+// 3. [NOVO] CALLBACKS (Subconjunto de Eventos)
+export async function getCallbacksList() {
+  try {
+    const callbacks = await prisma.event.findMany({
+      where: { type: 'CALLBACK' },
+      include: {
+        user: true,   // Dados do Operador
+        client: true, // Dados do Cliente
+      },
+      orderBy: { created_at: 'desc' },
+    });
+    return callbacks;
+  } catch (error) {
+    console.error('❌ Erro ao buscar callbacks:', error);
+    return [];
+  }
+}
+
 // ==========================================
-// OPERADORES (CRUD SISTEMA)
+// GESTÃO DE UTILIZADORES (CRUD)
 // ==========================================
 
 export async function createSystemUser(data: {
@@ -106,7 +141,11 @@ export async function createSystemUser(data: {
         is_active: true,
       }
     });
+
+    // [ATUALIZAÇÃO SEGURA] Adicionado revalidate para a nova lista de admins
     revalidatePath("/lists/operadores");
+    revalidatePath("/lists/administradores"); 
+    
     return { success: true, message: `Utilizador ${data.internalId} criado!` };
 
   } catch (error: any) {
@@ -137,7 +176,10 @@ export async function updateSystemUser(paramId: string | number, data: any) {
       },
     });
 
+    // [ATUALIZAÇÃO SEGURA] Adicionado revalidate para a nova lista de admins
     revalidatePath("/lists/operadores");
+    revalidatePath("/lists/administradores");
+
     return { success: true, message: 'Atualizado com sucesso' };
   } catch (error: any) {
     return { error: error.message };
@@ -153,7 +195,10 @@ export async function deleteUserAction(userIdOrId: string | number) {
     await prisma.user.delete({ where: { id: user.id } });
     try { await clerk.users.deleteUser(user.userId); } catch (e) {}
 
+    // [ATUALIZAÇÃO SEGURA] Adicionado revalidate para a nova lista de admins
     revalidatePath("/lists/operadores");
+    revalidatePath("/lists/administradores");
+    
     return { success: true, message: 'Eliminado com sucesso' };
   } catch (error: any) {
     return { error: error.message };
@@ -161,7 +206,7 @@ export async function deleteUserAction(userIdOrId: string | number) {
 }
 
 // ==========================================
-// VENDAS / EVENTOS
+// VENDAS / EVENTOS (CRUD)
 // ==========================================
 
 export async function getEventById(id: number) {
@@ -230,7 +275,10 @@ export async function createEvent(data: {
       });
     });
 
+    // [ATUALIZAÇÃO SEGURA] Adicionado revalidate para a nova lista de callbacks
     revalidatePath("/lists/vendas");
+    revalidatePath("/lists/callbacks");
+
     return { success: true, message: 'Venda criada com sucesso' };
   } catch (error: any) {
     return { error: error.message };
@@ -284,7 +332,10 @@ export async function updateEvent(
       });
     });
 
+    // [ATUALIZAÇÃO SEGURA] Adicionado revalidate para a nova lista de callbacks
     revalidatePath("/lists/vendas");
+    revalidatePath("/lists/callbacks");
+
     return { success: true, message: 'Venda atualizada com sucesso' };
   } catch (error: any) {
     console.error("Erro update:", error);
@@ -306,7 +357,10 @@ export async function deleteEventAction(eventId: number) {
       await tx.client.delete({ where: { id: event.clientId } });
     });
 
+    // [ATUALIZAÇÃO SEGURA] Adicionado revalidate para a nova lista de callbacks
     revalidatePath("/lists/vendas");
+    revalidatePath("/lists/callbacks");
+
     return { success: true, message: 'Venda eliminada com sucesso' };
   } catch (error: any) {
     return { error: error.message };

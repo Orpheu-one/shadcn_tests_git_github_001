@@ -1,7 +1,7 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 
-// Define as rotas de dashboard
+// Define as rotas que requerem autenticação (Dashboard e Listas)
 const isDashboardRoute = createRouteMatcher([
   '/admin(.*)',
   '/supervisor(.*)',
@@ -10,13 +10,27 @@ const isDashboardRoute = createRouteMatcher([
   '/lists(.*)',
 ])
 
+// Define as rotas sensíveis (Apenas Admin/Super-Admin)
+const isAdminOnlyRoute = createRouteMatcher([
+  '/lists/administradores(.*)', // ✅ ADICIONADO
+  '/lists/supervisores(.*)',
+  '/lists/dinamicas(.*)',
+])
 
+// Rotas que Vendedor NÃO pode acessar
+const isNotForVendedor = createRouteMatcher([
+  '/lists/callbacks(.*)',
+  '/lists/operadores(.*)',
+  '/lists/supervisores(.*)',
+  '/lists/administradores(.*)',
+  '/lists/dinamicas(.*)',
+])
 
 export default clerkMiddleware(async (auth, req) => {
   const { userId, sessionClaims } = await auth()
   const pathname = req.nextUrl.pathname
 
-  // 1. NÃO AUTENTICADO -> Redireciona para Homepage (sign-in) se tentar acessar dashboard
+  // 1. NÃO AUTENTICADO -> Redireciona para Login
   if (!userId) {
     if (isDashboardRoute(req)) {
       return NextResponse.redirect(new URL('/', req.url))
@@ -26,49 +40,46 @@ export default clerkMiddleware(async (auth, req) => {
 
   // 2. AUTENTICADO
   if (sessionClaims) {
-    // ✅ AJUSTE AQUI: Acessando 'metadata.userRole' conforme seu JWT Template
     const role = (sessionClaims.metadata as any)?.userRole as string
 
-    console.log('🔎 [Middleware] Debug Session:', JSON.stringify(sessionClaims.metadata))
-    console.log('🔎 [Middleware] User:', userId, 'Role:', role, 'Path:', pathname)
+    // --- REGRA SUPREMA: ADMIN E SUPER-ADMIN ---
+    const isAdmin = role === 'admin' || role === 'super-admin';
 
-    // ✅ REDIRECT baseado no role (quando acessa a raiz ou /redirect)
+    // 3. REDIRECT INICIAL (Apenas na raiz ou /redirect)
     if (pathname === '/' || pathname === '/redirect') {
-      if (role === 'super-admin' || role === 'admin') {
-        return NextResponse.redirect(new URL('/admin', req.url))
-      }
-      
-      if (role === 'supervisor') {
-        return NextResponse.redirect(new URL('/supervisor', req.url))
-      }
-      
-      if (role === 'operador') {
-        return NextResponse.redirect(new URL('/operador', req.url))
-      }
-      
-      if (role === 'vendedor') {
-        return NextResponse.redirect(new URL('/vendedor', req.url))
-      }
-      
-      // Caso o role venha vazio ou não mapeado
-      console.warn(`⚠️ [Middleware] Role desconhecido ou ausente: '${role}'`)
+      if (isAdmin) return NextResponse.redirect(new URL('/admin', req.url))
+      if (role === 'supervisor') return NextResponse.redirect(new URL('/supervisor', req.url))
+      if (role === 'operador') return NextResponse.redirect(new URL('/operador', req.url))
+      if (role === 'vendedor') return NextResponse.redirect(new URL('/vendedor', req.url))
       return NextResponse.next()
     }
 
-    // ✅ Verificação de segurança (opcional): Log se user acessa página de outro role
-    const roleRouteMap: Record<string, string> = {
-      'admin': '/admin',
-      'super-admin': '/admin',
-      'supervisor': '/supervisor',
-      'operador': '/operador',
-      'vendedor': '/vendedor',
+    // ✅ ADMIN/SUPER-ADMIN: Acesso total, libera imediatamente
+    if (isAdmin) {
+      return NextResponse.next()
     }
 
-    const expectedRoute = roleRouteMap[role]
-    
-    if (expectedRoute && !pathname.startsWith(expectedRoute) && isDashboardRoute(req)) {
-      console.warn(`⚠️ [Middleware] Acesso suspeito: Role '${role}' acessando '${pathname}'`)
+    // -----------------------------------------------------------------
+    // DAQUI PARA BAIXO: RESTRIÇÕES PARA NON-ADMINS
+    // -----------------------------------------------------------------
+
+    // Proteção: Rotas exclusivas de Admin
+    if (isAdminOnlyRoute(req)) {
+      console.warn(`⛔ [Middleware] Acesso negado: ${role} tentou acessar ${pathname}`)
+      const homeUrl = role === 'supervisor' ? '/supervisor' :
+                      role === 'operador' ? '/operador' :
+                      role === 'vendedor' ? '/vendedor' : '/';
+      return NextResponse.redirect(new URL(homeUrl, req.url))
     }
+
+    // Proteção: Vendedor não pode acessar certas rotas
+    if (role === 'vendedor' && isNotForVendedor(req)) {
+      console.warn(`⛔ [Middleware] Vendedor bloqueado em: ${pathname}`)
+      return NextResponse.redirect(new URL('/vendedor', req.url))
+    }
+
+    // ✅ Log de monitorização (opcional - sem bloquear)
+    console.log(`🔎 [Middleware] User: ${userId} Role: ${role} Path: ${pathname}`)
   }
 
   return NextResponse.next()
@@ -76,9 +87,7 @@ export default clerkMiddleware(async (auth, req) => {
 
 export const config = {
   matcher: [
-    // Pula arquivos internos do Next.js e arquivos estáticos
     '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
-    // Sempre executa para rotas de API
     '/(api|trpc)(.*)',
   ],
 }
