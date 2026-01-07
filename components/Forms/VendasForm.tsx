@@ -56,20 +56,23 @@ const VendasForm = ({
   tableLabel, 
   formId,
   eventId,
+  onSuccess,
 }: { 
   type: "create" | "edit"; 
   tableLabel: string;
   formId: string;
   eventId?: number;
+  onSuccess?: () => void;
 }) => {
   const [isPending, startTransition] = useTransition();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [vendaStatus, setVendaStatus] = useState<VendaStatus>({
     tipo: 'Venda',
     modalidade: 'F2F',
     status: 'Projecto',
   });
 
-  const [eventData, setEventData] = useState<FetchedEventData| null>(null);
+  const [eventData, setEventData] = useState<FetchedEventData | null>(null);
   const [isLoadingEvent, setIsLoadingEvent] = useState(false);
   const [operators, setOperators] = useState<any[]>([]);
   const [selectedOperatorId, setSelectedOperatorId] = useState<string>('');
@@ -88,7 +91,6 @@ const VendasForm = ({
     resolver: zodResolver(schema),
   });
 
-  // MAPAS DE CONVERSÃO (UI -> DB ENUMS)
   const typeMap: Record<string, EventType> = { 'Venda': 'SALE', 'Callback': 'CALLBACK' };
   const channelMap: Record<string, EventChannel> = { 'F2F': 'F2F', 'Remoto': 'REMOTE' };
   const statusMap: Record<string, EventStatus> = { 
@@ -129,9 +131,9 @@ const VendasForm = ({
     }
   }, [type, eventId, setValue, isAdmin]);
 
-  // --- ONSUBMIT CORRIGIDO ---
   const onSubmit = handleSubmit(async (formData) => {
     const tid = toast.loading(type === "create" ? "A criar..." : "A atualizar...");
+    setIsSubmitting(true);
 
     startTransition(async () => {
       try {
@@ -139,7 +141,6 @@ const VendasForm = ({
         const rawChannel = channelMap[vendaStatus.modalidade];
         let finalStatus = statusMap[vendaStatus.status];
 
-        // Regra: Callbacks são sempre 'PROJECT'
         if (rawType === 'CALLBACK') {
           finalStatus = 'PROJECT';
         }
@@ -173,16 +174,30 @@ const VendasForm = ({
         
         toast.success("Operação concluída!", { id: tid });
         
-        // Aguarda 500ms extra para garantir que a BD propagou
-        await new Promise(resolve => setTimeout(resolve, 500));
+        if (onSuccess) onSuccess();
         
-        // Redireciona para a lista (melhor que reload)
+        await new Promise(resolve => setTimeout(resolve, 500));
         window.location.href = '/lists/vendas';
+        
       } catch (error: any) {
+        setIsSubmitting(false);
         toast.error(error.message || "Erro na submissão", { id: tid });
       }
     });
   });
+
+  if (isSubmitting) {
+    return (
+      <div className="w-full grid grid-cols-1 gap-6 lg:grid-cols-3 relative min-h-[400px]">
+        <div className="absolute inset-0 bg-white/80 flex items-center justify-center z-50 rounded-lg">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-3" />
+            <p className="text-sm font-medium text-gray-700">A processar...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <form id={formId} className="w-full grid grid-cols-1 gap-6 lg:grid-cols-3" onSubmit={onSubmit}>

@@ -9,7 +9,6 @@ import { deleteUserAction, deleteEventAction, getOperatorById, getEventById } fr
 import {JSX} from "react";
 import { toast } from "sonner";
 
-// Dynamic imports
 const OperadoresForm = dynamic(() => import("./Forms/OperadoresForm"), { ssr: false });
 const VendasForm = dynamic(() => import("./Forms/VendasForm"), { ssr: false });
 const CallbacksForm = dynamic(() => import("./Forms/CallbacksForm"), { ssr: false });
@@ -17,10 +16,6 @@ const DinanmicasForm = dynamic(() => import("./Forms/DinamicasForm"), { ssr: fal
 const SupervisoresForm = dynamic(() => import("./Forms/SupervisorsForm"), { ssr: false });
 const AdministradoresForm = dynamic(() => import("./Forms/AdministradoresForm"), { ssr: false });
 
-
-
-
-// Types para dados de confirmação
 type DeleteConfirmData = {
   type: 'user' | 'event';
   displayName: string;
@@ -33,20 +28,21 @@ const forms: {
     tableLabel: string, 
     formId: string, 
     id?: number, 
-    userId?: string
+    userId?: string,
+    onSuccess?: () => void
   ) => JSX.Element 
 } = {
-  operador: (type, tableLabel, formId, id, userId) => (
-    <OperadoresForm type={type} tableLabel={tableLabel} formId={formId} userId={userId} />
+  operador: (type, tableLabel, formId, id, userId, onSuccess) => (
+    <OperadoresForm type={type} tableLabel={tableLabel} formId={formId} userId={userId} onSuccess={onSuccess} />
   ),
-  operadores: (type, tableLabel, formId, id, userId) => (
-    <OperadoresForm type={type} tableLabel={tableLabel} formId={formId} userId={userId} />
+  operadores: (type, tableLabel, formId, id, userId, onSuccess) => (
+    <OperadoresForm type={type} tableLabel={tableLabel} formId={formId} userId={userId} onSuccess={onSuccess} />
   ),
-  vendas: (type, tableLabel, formId, id, userId) => (
-    <VendasForm type={type} tableLabel={tableLabel} formId={formId} eventId={id} />
+  vendas: (type, tableLabel, formId, id, userId, onSuccess) => (
+    <VendasForm type={type} tableLabel={tableLabel} formId={formId} eventId={id} onSuccess={onSuccess} />
   ),
-  events: (type, tableLabel, formId, id, userId) => (
-    <VendasForm type={type} tableLabel={tableLabel} formId={formId} eventId={id} />
+  events: (type, tableLabel, formId, id, userId, onSuccess) => (
+    <VendasForm type={type} tableLabel={tableLabel} formId={formId} eventId={id} onSuccess={onSuccess} />
   ),
 };
 
@@ -59,21 +55,18 @@ const FormModal = ({ table, type, data, id, userId }: any) => {
   const router = useRouter();
   const { user } = useUser();
 
-  // Check permissions
   const canCreate = () => {
     if (type !== "create") return true;
     const userRole = (user?.publicMetadata?.role as string)?.toLowerCase();
     return userRole === "admin" || userRole === "supervisor";
   };
 
-  // Fetch data for delete confirmation (CORRIGIDO PARA UTILIZADORES)
   useEffect(() => {
     if (type === "delete" && open) {
       const fetchDeleteData = async () => {
         setIsLoadingDelete(true);
         try {
           const isEvent = table === "vendas" || table === "events";
-          
           if (isEvent && id) {
             const eventData = await getEventById(Number(id));
             if (eventData) {
@@ -84,7 +77,6 @@ const FormModal = ({ table, type, data, id, userId }: any) => {
               });
             }
           } else {
-            // Lógica robusta: tenta buscar por userId ou por id (DB)
             const targetId = userId || id;
             if (targetId) {
               const userData = await getOperatorById(targetId);
@@ -107,20 +99,14 @@ const FormModal = ({ table, type, data, id, userId }: any) => {
     }
   }, [type, open, table, id, userId]);
 
-  // Handle Delete (CORRIGIDO PARA UTILIZADORES)
   const handleDelete = async () => {
     const tid = toast.loading("A eliminar...");
     try {
       const isEvent = table === "vendas" || table === "events";
-      
-      // Enviamos o userId se existir, senão enviamos o id. 
-      // A action findUser no servidor tratará de ambos.
       const res = isEvent 
         ? await deleteEventAction(Number(id)) 
         : await deleteUserAction(userId || id);
-        
       if (res?.error) throw new Error(res.error);
-      
       toast.success("Eliminado com sucesso!", { id: tid });
       setOpen(false);
       router.refresh();
@@ -137,6 +123,10 @@ const FormModal = ({ table, type, data, id, userId }: any) => {
     setOpen(true);
   };
 
+  const handleFormSuccess = () => {
+    setOpen(false);
+  };
+
   const Form = () => {
     const tableLabel = table.charAt(0).toUpperCase() + table.slice(1);
     const formId = `form-${table}-${type}`;
@@ -147,7 +137,6 @@ const FormModal = ({ table, type, data, id, userId }: any) => {
           <h2 className="text-xl font-bold text-gray-800 text-center">
             Confirmar Eliminação
           </h2>
-          
           {isLoadingDelete ? (
             <div className="text-center py-8">
               <p className="text-gray-600 animate-pulse">A carregar dados...</p>
@@ -187,7 +176,7 @@ const FormModal = ({ table, type, data, id, userId }: any) => {
 
     return SelectedForm ? (
       <>
-        {SelectedForm(type, tableLabel, formId, id as number, userId)}
+        {SelectedForm(type, tableLabel, formId, id as number, userId, handleFormSuccess)}
         <button form={formId} className="bg-purple-600 text-white p-2 rounded-md mt-4 w-full hover:bg-purple-700 transition">
           {type === "create" ? "Criar" : "Atualizar"}
         </button>

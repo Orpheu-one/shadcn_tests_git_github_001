@@ -2,8 +2,7 @@ import type { Metadata } from "next";
 import {
   ClerkProvider
 } from '@clerk/nextjs'
-import { Geist, Geist_Mono } from "next/font/google"
-import Navbar from "@/components/Navbar";
+import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
 
@@ -46,10 +45,10 @@ export default function RootLayout({
         {/* CORREÇÃO 2: Adicionar flex-col para que os elementos (Navbar + Div Conteúdo) se empilhem verticalmente */}
         <main className="w-full h-screen flex flex-col">
 
-          <Navbar />
+         
 
             {/* CORREÇÃO 3: Usar flex-grow para a div de conteúdo expandir e ocupar todo o espaço vertical restante */}
-            <div className="p-4 flex-grow overflow-y-auto">
+            <div className="p-4 grow overflow-y-auto">
 
               {children}
               <Toaster position="top-center" richColors closeButton />
