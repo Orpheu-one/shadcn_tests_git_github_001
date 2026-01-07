@@ -5,12 +5,12 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import InputField from '../InputField';
 import React, { useState, useEffect, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
 import { createSystemUser, updateSystemUser, getOperatorById } from '@/lib/actions/user.actions';
 import { toast } from 'sonner';
 import { UserRole } from '@prisma/client';
 
-// Schema for CREATE - password OBRIGATÓRIA
 const createSchema = z.object({
   email: z.string().email({ message: "Insira um email válido" }),
   name: z.string().min(3, { message: "Mínimo 3 caracteres" }),
@@ -21,7 +21,6 @@ const createSchema = z.object({
   password: z.string().min(4, { message: "Mínimo 4 caracteres" }),
 });
 
-// Schema for EDIT - password opcional
 const editSchema = z.object({
   email: z.string().email({ message: "Insira um email válido" }),
   name: z.string().min(3, { message: "Mínimo 3 caracteres" }),
@@ -51,13 +50,17 @@ const OperadoresForm = ({
   tableLabel, 
   formId,
   userId,
+  onSuccess,
 }: { 
   type: "create" | "edit"; 
   tableLabel: string;
   formId: string;
   userId?: string;
+  onSuccess?: () => void;
 }) => {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [userData, setUserData] = useState<FetchedUserData | null>(null);
   const [isLoadingUser, setIsLoadingUser] = useState(false);
   const { user: currentUser } = useUser();
@@ -74,7 +77,6 @@ const OperadoresForm = ({
   const currentUserRole = currentUser?.publicMetadata?.role as string || 'N/A';
   const currentUserName = `${currentUser?.firstName || ''} ${currentUser?.lastName || ''}`.trim() || 'N/A';
 
-  // Fetch user data for EDIT mode
   useEffect(() => {
     if (type === "edit" && userId) {
       const fetchUserData = async () => {
@@ -105,24 +107,21 @@ const OperadoresForm = ({
 
   const onSubmit = handleSubmit(async (formData) => {
     console.log("🚀 Form submitted:", formData);
-    
     const tid = toast.loading(type === "create" ? "A criar utilizador..." : "A atualizar utilizador...");
-    
+    setIsSubmitting(true);
+
     startTransition(async () => {
       try {
         let result;
 
         if (type === "create") {
           const createData = formData as CreateFormValues;
-          
-          // CRITICAL: Use internalId as password
           result = await createSystemUser({
             email: createData.email,
             name: createData.name,
             apelido: createData.apelido,
             internalId: createData.internalId,
             phone: createData.phone,
-            password: createData.internalId, // ← PASSWORD = INTERNAL ID
             role: createData.role as UserRole,
           });
 
@@ -130,11 +129,11 @@ const OperadoresForm = ({
         } else {
           if (!userId) {
             toast.error("ID do utilizador não fornecido", { id: tid });
+            setIsSubmitting(false);
             return;
           }
 
           const editData = formData as EditFormValues;
-          
           result = await updateSystemUser(userId, {
             name: editData.name,
             apelido: editData.apelido,
@@ -149,31 +148,46 @@ const OperadoresForm = ({
         if (result?.error) {
           console.error("❌ Error:", result.error);
           toast.error(result.error, { id: tid });
+          setIsSubmitting(false);
         } else {
           toast.success(result?.message || "Operação concluída!", { id: tid });
           
-          setTimeout(() => {
-            window.location.reload();
-          }, 1500);
+          if (onSuccess) onSuccess();
+          
+          await new Promise(resolve => setTimeout(resolve, 300));
+          router.push('/lists/operadores');
+          router.refresh();
         }
 
       } catch (error: any) {
         console.error('❌ Erro no submit:', error);
         toast.error(error?.message || 'Erro desconhecido', { id: tid });
+        setIsSubmitting(false);
       }
     });
   });
 
+  if (isSubmitting) {
+    return (
+      <div className="w-full grid grid-cols-1 gap-6 lg:grid-cols-3 relative min-h-[400px]">
+        <div className="absolute inset-0 bg-white/80 flex items-center justify-center z-50 rounded-lg">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-3" />
+            <p className="text-sm font-medium text-gray-700">A processar...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <form id={formId} className="w-full grid grid-cols-1 gap-6 lg:grid-cols-3" onSubmit={onSubmit}>
-      {/* ERROR ALERT */}
       {type === "edit" && !userId && (
         <div className="lg:col-span-3 p-4 bg-red-100 border border-red-400 rounded-md">
           <p className="text-red-800 font-bold text-sm">⚠️ ERRO: userId não foi passado!</p>
         </div>
       )}
 
-      {/* HEADER */}
       <div className="lg:col-span-3 flex justify-between items-center mb-2">
         <h1 className="text-xl font-semibold text-gray-800">
           {type === "create" ? "Criar novo" : "Editar"} {tableLabel}
@@ -186,7 +200,6 @@ const OperadoresForm = ({
         </div>
       </div>
 
-      {/* USER INFO (Edit Mode) */}
       {type === "edit" && (
         <div className="lg:col-span-3">
           <p className="text-xs text-gray-500 font-medium mb-1">Informação do Utilizador:</p>
@@ -224,7 +237,6 @@ const OperadoresForm = ({
         </div>
       )}
 
-      {/* ROLE (Edit Mode) */}
       {type === "edit" && userData && (
         <div className="lg:col-span-3">
           <p className="text-xs text-gray-500 font-medium mb-1">Role Atual:</p>
@@ -237,7 +249,6 @@ const OperadoresForm = ({
         </div>
       )}
 
-      {/* SECTION: Informação Pessoal */}
       <span className="text-xs text-gray-500 font-medium lg:col-span-3 mt-2 border-b border-gray-200 pb-1">
         Informação Pessoal
       </span>
@@ -249,7 +260,6 @@ const OperadoresForm = ({
         error={errors.name} 
         inputProps={{ className: "text-sm px-2 text-gray-800" }} 
       />
-      
       <InputField 
         label="Apelido" 
         name="apelido" 
@@ -281,7 +291,6 @@ const OperadoresForm = ({
         }} 
       />
 
-      {/* SECTION: Credenciais (Only for CREATE) */}
       {type === "create" && (
         <>
           <span className="text-xs text-gray-500 font-medium lg:col-span-3 mt-2 border-b border-gray-200 pb-1">
@@ -332,7 +341,6 @@ const OperadoresForm = ({
         </>
       )}
 
-      {/* PASSWORD - Only for EDIT (optional) */}
       {type === "edit" && (
         <>
           <span className="text-xs text-gray-500 font-medium lg:col-span-3 mt-2 border-b border-gray-200 pb-1">
@@ -353,20 +361,12 @@ const OperadoresForm = ({
         </>
       )}
 
-      {/* INFO BOX for CREATE */}
       {type === "create" && (
         <div className="lg:col-span-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
           <p className="text-sm text-blue-800">
             ℹ️ <strong>Nota:</strong> O ID Interno será usado como username e password inicial no Clerk. 
             Deve ter mínimo 8 caracteres.
           </p>
-        </div>
-      )}
-
-      {/* LOADING */}
-      {isPending && (
-        <div className="lg:col-span-3 text-center py-4">
-          <p className="text-purple-600 font-semibold text-sm">A processar...</p>
         </div>
       )}
     </form>

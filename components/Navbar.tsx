@@ -6,8 +6,12 @@ import { MegaphoneIcon, MessageCircleMoreIcon } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 
+
+
 const Navbar = () => {
   const { user, isLoaded } = useUser()
+const userRole = user?.publicMetadata?.role as string | undefined
+
 
   useEffect(() => {
     console.log('[Navbar] useUser()', { isLoaded, user })
@@ -53,8 +57,8 @@ const Navbar = () => {
           </Link>
         </div>
         <div className="flex flex-col pb-2">
-          <span className="text-sm leading-5 font-medium text-right">User Jonh Doe</span>
-          <span className="text-xs text-muted-foreground text-right">admin</span>
+          <span className="text-md leading-5 font-medium text-right">{user?.firstName} {user?.lastName}</span>
+          <span className="text-sm text-muted-foreground text-right">{userRole}</span>
         </div>
         
         <UserButton />

@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import React, { useState, useEffect, useCallback, useTransition } from 'react'; 
+import { useRouter } from 'next/navigation';
 import InputField from '../InputField'; 
 import DateTime from '../DateTime';
 import VendasSwitches, { VendaStatus } from '../VendasSwitches';
@@ -12,7 +13,6 @@ import { toast } from 'sonner';
 import { EventType, EventChannel, EventStatus } from '@prisma/client';
 import { useUser } from '@clerk/nextjs';
 
-// --- TYPES ---
 type FetchedOperator = {
   id: number;
   userId: string;
@@ -64,6 +64,7 @@ const VendasForm = ({
   eventId?: number;
   onSuccess?: () => void;
 }) => {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [vendaStatus, setVendaStatus] = useState<VendaStatus>({
@@ -91,12 +92,22 @@ const VendasForm = ({
     resolver: zodResolver(schema),
   });
 
-  const typeMap: Record<string, EventType> = { 'Venda': 'SALE', 'Callback': 'CALLBACK' };
-  const channelMap: Record<string, EventChannel> = { 'F2F': 'F2F', 'Remoto': 'REMOTE' };
+  // MAPAS DE CONVERSÃO (UI -> DB ENUMS)
+  // Estes mapas garantem que o status é convertido corretamente
+  const typeMap: Record<string, EventType> = { 
+    'Venda': 'SALE', 
+    'Callback': 'CALLBACK' 
+  };
+  
+  const channelMap: Record<string, EventChannel> = { 
+    'F2F': 'F2F', 
+    'Remoto': 'REMOTE' 
+  };
+  
   const statusMap: Record<string, EventStatus> = { 
-    'Projecto': 'PROJECT', 
-    'Fechada': 'CLOSED', 
-    'Perdida': 'LOST' 
+    'Projecto': 'PROJECT',   // ← UI -> DB
+    'Fechada': 'CLOSED',     // ← UI -> DB
+    'Perdida': 'LOST'        // ← UI -> DB
   };
 
   useEffect(() => {
@@ -114,9 +125,14 @@ const VendasForm = ({
           setValue('address', data.client.address);
           setValue('obs', data.obs || '');
 
+          // CONVERSÃO REVERSA: DB -> UI
           const revType = data.type === 'SALE' ? 'Venda' : 'Callback';
           const revChan = data.channel === 'REMOTE' ? 'Remoto' : 'F2F';
-          const revStat = data.status === 'PROJECT' ? 'Projecto' : data.status === 'CLOSED' ? 'Fechada' : 'Perdida';
+          const revStat = 
+            data.status === 'PROJECT' ? 'Projecto' : 
+            data.status === 'CLOSED' ? 'Fechada' : 
+            'Perdida';
+          
           setVendaStatus({ tipo: revType, modalidade: revChan, status: revStat });
         } catch (error) {
           toast.error("Erro ao carregar evento");
@@ -141,9 +157,16 @@ const VendasForm = ({
         const rawChannel = channelMap[vendaStatus.modalidade];
         let finalStatus = statusMap[vendaStatus.status];
 
+        // Regra: Callbacks são sempre 'PROJECT'
         if (rawType === 'CALLBACK') {
           finalStatus = 'PROJECT';
         }
+
+        console.log('📊 Status a enviar para BD:', {
+          UI_Status: vendaStatus.status,
+          DB_Status: finalStatus,
+          Tipo: rawType
+        });
 
         const payload = {
           clientData: {
@@ -155,7 +178,7 @@ const VendasForm = ({
           },
           type: rawType,
           channel: rawChannel,
-          status: finalStatus,
+          status: finalStatus, // ← ESTE É O STATUS CORRETO DA BD
           obs: formData.obs,
         };
 
@@ -176,8 +199,9 @@ const VendasForm = ({
         
         if (onSuccess) onSuccess();
         
-        await new Promise(resolve => setTimeout(resolve, 500));
-        window.location.href = '/lists/vendas';
+        await new Promise(resolve => setTimeout(resolve, 300));
+        router.push('/lists/vendas');
+        router.refresh();
         
       } catch (error: any) {
         setIsSubmitting(false);

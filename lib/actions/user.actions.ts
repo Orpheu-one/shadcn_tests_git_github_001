@@ -24,11 +24,11 @@ async function findUser(paramId: string | number) {
 // LISTAS DE LEITURA (GETTERS)
 // ==========================================
 
-// 1. OPERADORES (MANTIDO)
+// 1. OPERADORES
 export async function getOperatorsList() {
   try {
     return await prisma.user.findMany({
-      where: { is_active: true }, // Adicionei filtro implícito se quiseres separar roles depois
+      where: { is_active: true },
       orderBy: { frst_name: 'asc' },
     });
   } catch (error) {
@@ -37,12 +37,12 @@ export async function getOperatorsList() {
   }
 }
 
-// 2. [NOVO] ADMINISTRADORES
+// 2. ADMINISTRADORES
 export async function getAdministratorsList() {
   try {
     return await prisma.user.findMany({
       where: { 
-        role: { in: ['ADMIN', 'SUPER_ADMIN'] }, // Filtra apenas Admins
+        role: { in: ['ADMIN', 'SUPER_ADMIN'] },
         is_active: true 
       },
       orderBy: { frst_name: 'asc' },
@@ -75,7 +75,7 @@ export async function getOperatorById(paramId: string | number) {
   }
 }
 
-// 3. [NOVO] CALLBACKS (Subconjunto de Eventos)
+// 3. CALLBACKS
 export async function getCallbacksList() {
   try {
     const callbacks = await prisma.event.findMany({
@@ -96,6 +96,15 @@ export async function getCallbacksList() {
 // ==========================================
 // GESTÃO DE UTILIZADORES (CRUD)
 // ==========================================
+
+// Função auxiliar para revalidar todas as listas de users
+// Isto garante que se mudares um role, a lista antiga e a nova atualizam
+function revalidateUserLists() {
+  revalidatePath("/lists/operadores");
+  revalidatePath("/lists/administradores"); 
+  revalidatePath("/lists/supervisores"); // Adicionado baseado na Sidebar
+  revalidatePath("/lists/d2d");          // Adicionado baseado na Sidebar (Vendedores)
+}
 
 export async function createSystemUser(data: {
   email: string;
@@ -142,9 +151,8 @@ export async function createSystemUser(data: {
       }
     });
 
-    // [ATUALIZAÇÃO SEGURA] Adicionado revalidate para a nova lista de admins
-    revalidatePath("/lists/operadores");
-    revalidatePath("/lists/administradores"); 
+    // Atualiza apenas as listas necessárias
+    revalidateUserLists();
     
     return { success: true, message: `Utilizador ${data.internalId} criado!` };
 
@@ -176,9 +184,8 @@ export async function updateSystemUser(paramId: string | number, data: any) {
       },
     });
 
-    // [ATUALIZAÇÃO SEGURA] Adicionado revalidate para a nova lista de admins
-    revalidatePath("/lists/operadores");
-    revalidatePath("/lists/administradores");
+    // Atualiza apenas as listas necessárias
+    revalidateUserLists();
 
     return { success: true, message: 'Atualizado com sucesso' };
   } catch (error: any) {
@@ -195,9 +202,8 @@ export async function deleteUserAction(userIdOrId: string | number) {
     await prisma.user.delete({ where: { id: user.id } });
     try { await clerk.users.deleteUser(user.userId); } catch (e) {}
 
-    // [ATUALIZAÇÃO SEGURA] Adicionado revalidate para a nova lista de admins
-    revalidatePath("/lists/operadores");
-    revalidatePath("/lists/administradores");
+    // Atualiza apenas as listas necessárias
+    revalidateUserLists();
     
     return { success: true, message: 'Eliminado com sucesso' };
   } catch (error: any) {
@@ -208,6 +214,13 @@ export async function deleteUserAction(userIdOrId: string | number) {
 // ==========================================
 // VENDAS / EVENTOS (CRUD)
 // ==========================================
+
+// Função auxiliar para revalidar listas de eventos
+function revalidateEventLists() {
+  revalidatePath("/lists/vendas");
+  revalidatePath("/lists/callbacks");
+  revalidatePath("/lists/dinamicas"); // Sugestão: caso uses eventos aqui também
+}
 
 export async function getEventById(id: number) {
   try {
@@ -275,9 +288,7 @@ export async function createEvent(data: {
       });
     });
 
-    // [ATUALIZAÇÃO SEGURA] Adicionado revalidate para a nova lista de callbacks
-    revalidatePath("/lists/vendas");
-    revalidatePath("/lists/callbacks");
+    revalidateEventLists();
 
     return { success: true, message: 'Venda criada com sucesso' };
   } catch (error: any) {
@@ -332,9 +343,7 @@ export async function updateEvent(
       });
     });
 
-    // [ATUALIZAÇÃO SEGURA] Adicionado revalidate para a nova lista de callbacks
-    revalidatePath("/lists/vendas");
-    revalidatePath("/lists/callbacks");
+    revalidateEventLists();
 
     return { success: true, message: 'Venda atualizada com sucesso' };
   } catch (error: any) {
@@ -357,9 +366,7 @@ export async function deleteEventAction(eventId: number) {
       await tx.client.delete({ where: { id: event.clientId } });
     });
 
-    // [ATUALIZAÇÃO SEGURA] Adicionado revalidate para a nova lista de callbacks
-    revalidatePath("/lists/vendas");
-    revalidatePath("/lists/callbacks");
+    revalidateEventLists();
 
     return { success: true, message: 'Venda eliminada com sucesso' };
   } catch (error: any) {
