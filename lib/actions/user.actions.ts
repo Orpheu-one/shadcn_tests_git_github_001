@@ -81,7 +81,7 @@ export async function getCallbacksList() {
     const callbacks = await prisma.event.findMany({
       where: { type: 'CALLBACK' },
       include: {
-        user: true,   // Dados do Operador
+        user: true, // Dados do Operador
         client: true, // Dados do Cliente
       },
       orderBy: { created_at: 'desc' },
@@ -103,7 +103,7 @@ function revalidateUserLists() {
   revalidatePath("/lists/operadores");
   revalidatePath("/lists/administradores"); 
   revalidatePath("/lists/supervisores"); // Adicionado baseado na Sidebar
-  revalidatePath("/lists/d2d");          // Adicionado baseado na Sidebar (Vendedores)
+  revalidatePath("/lists/d2d"); // Adicionado baseado na Sidebar (Vendedores)
 }
 
 export async function createSystemUser(data: {
@@ -153,7 +153,6 @@ export async function createSystemUser(data: {
 
     // Atualiza apenas as listas necessárias
     revalidateUserLists();
-    
     return { success: true, message: `Utilizador ${data.internalId} criado!` };
 
   } catch (error: any) {
@@ -204,7 +203,6 @@ export async function deleteUserAction(userIdOrId: string | number) {
 
     // Atualiza apenas as listas necessárias
     revalidateUserLists();
-    
     return { success: true, message: 'Eliminado com sucesso' };
   } catch (error: any) {
     return { error: error.message };
@@ -228,7 +226,7 @@ export async function getEventById(id: number) {
       where: { id },
       include: {
         client: { select: { frst_name: true, lst_name: true, email: true, phone: true, address: true } },
-        user: { select: { id: true, internalId: true, frst_name: true, lst_name: true, role: true } }
+        user: { select: { id: true, userId: true, internalId: true, frst_name: true, lst_name: true, role: true } }
       }
     });
 
@@ -242,7 +240,15 @@ export async function getEventById(id: number) {
       channel: event.channel,
       status: event.status,
       obs: event.obs,
-      operator: event.user,
+      calledback_at: event.calledback_at,
+      operator: {
+        id: event.user.id,
+        userId: event.user.userId,
+        internalId: event.user.internalId,
+        frst_name: event.user.frst_name,
+        lst_name: event.user.lst_name,
+        role: event.user.role,
+      },
       client: event.client,
     };
   } catch (error) {
@@ -257,6 +263,7 @@ export async function createEvent(data: {
   channel: EventChannel;
   status: EventStatus;
   obs?: string;
+  calledback_at?: Date | null;
 }) {
   try {
     const user = await prisma.user.findUnique({ where: { userId: data.clerkUserId } });
@@ -284,6 +291,7 @@ export async function createEvent(data: {
           channel: data.channel,
           status: data.status,
           obs: data.obs || null,
+          calledback_at: data.calledback_at || null,
         }
       });
     });
@@ -310,6 +318,7 @@ export async function updateEvent(
     channel: EventChannel;
     status: EventStatus;
     obs?: string;
+    calledback_at?: Date | null;
   }
 ) {
   try {
@@ -339,6 +348,7 @@ export async function updateEvent(
           channel: data.channel,
           status: data.status,
           obs: data.obs || null,
+          calledback_at: data.calledback_at || null,
         }
       });
     });

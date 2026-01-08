@@ -1,28 +1,45 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import ToggleSwitch from './ToggleSwitch';
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { Calendar as CalendarIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
-// Tipo expandido para incluir 'Perdida'
+// Tipo expandido para incluir 'Perdida' e calledback_at
 export type VendaStatus = {
   tipo: 'Venda' | 'Callback';
   modalidade: 'F2F' | 'Remoto';
   status: 'Projecto' | 'Fechada' | 'Perdida';
+  calledback_at?: Date;
 }
 
 interface VendasSwitchesProps {
   onValuesChange: (values: VendaStatus) => void;
   initialValues?: VendaStatus;
   userRole?: string;
+  selectedDate?: Date;
+  onDateChange?: (date: Date) => void;
+  dateError?: string;
 }
 
 const VendasSwitches: React.FC<VendasSwitchesProps> = ({ 
   onValuesChange, 
   initialValues,
-  userRole = 'operator' 
+  userRole = 'operator',
+  selectedDate,
+  onDateChange,
+  dateError
 }) => {
 
   const [isCallback, setIsCallback] = useState(initialValues?.tipo === 'Callback');
   const [isRemoto, setIsRemoto] = useState(initialValues?.modalidade === 'Remoto');
-  
   // Estado: 0=Projecto, 1=Fechada, 2=Perdida
   const [statusIndex, setStatusIndex] = useState(() => {
     if (initialValues?.status === 'Fechada') return 1;
@@ -45,7 +62,6 @@ const VendasSwitches: React.FC<VendasSwitchesProps> = ({
   useEffect(() => {
     const tipo: 'Venda' | 'Callback' = isCallback ? 'Callback' : 'Venda';
     const modalidade: 'F2F' | 'Remoto' = isRemoto ? 'Remoto' : 'F2F';
-    
     let status: 'Projecto' | 'Fechada' | 'Perdida' = 'Projecto';
     
     if (isStatusActive) {
@@ -64,13 +80,17 @@ const VendasSwitches: React.FC<VendasSwitchesProps> = ({
       }
     }
 
-    onValuesChange({ tipo, modalidade, status });
-  }, [isCallback, isRemoto, statusIndex, isStatusActive, isAdminOrSupervisor, onValuesChange]);
+    onValuesChange({ 
+      tipo, 
+      modalidade, 
+      status,
+      calledback_at: isCallback ? selectedDate : undefined
+    });
+  }, [isCallback, isRemoto, statusIndex, isStatusActive, isAdminOrSupervisor, selectedDate, onValuesChange]);
 
   // Handler para ciclar entre estados
   const handleStatusChange = () => {
     if (!isStatusActive) return;
-    
     if (isAdminOrSupervisor) {
       // Ciclo: Projecto -> Fechada -> Perdida -> Projecto
       setStatusIndex((prev) => (prev + 1) % 3);
@@ -88,7 +108,6 @@ const VendasSwitches: React.FC<VendasSwitchesProps> = ({
   // Label dinâmico
   const getStatusLabel = () => {
     if (!isStatusActive) return 'Projecto';
-    
     if (isAdminOrSupervisor) {
       return statusIndex === 0 ? 'Projecto' : statusIndex === 1 ? 'Fechada' : 'Perdida';
     } else {
@@ -125,39 +144,92 @@ const VendasSwitches: React.FC<VendasSwitchesProps> = ({
         />
       </div>
 
-      {/* 3º Switch: Status com 3 estados */}
+      {/* 3º Campo: Status OU Data/Hora do Callback */}
       <div className="col-span-1">
-        <div className="flex flex-col gap-2">
-          <span className="text-sm font-medium text-gray-700">3. Status</span>
-          <button
-            type="button"
-            onClick={handleStatusChange}
-            disabled={!isStatusActive || (!isAdminOrSupervisor && !isRemoto)}
-            className={`
-              px-4 py-2 rounded-lg font-semibold text-sm transition-all
-              ${!isStatusActive || (!isAdminOrSupervisor && !isRemoto)
-                ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                : statusIndex === 0
-                  ? 'bg-yellow-200 text-yellow-800 hover:bg-yellow-300'
-                  : statusIndex === 1
-                    ? 'bg-green-200 text-green-800 hover:bg-green-300'
-                    : 'bg-red-200 text-red-800 hover:bg-red-300'
-              }
-            `}
-          >
-            {getStatusLabel()}
-          </button>
-          {isAdminOrSupervisor && isStatusActive && (
-            <span className="text-xs text-gray-500 text-center">
-              Clique para alternar
-            </span>
-          )}
-          {!isAdminOrSupervisor && isRemoto && isStatusActive && (
-            <span className="text-xs text-gray-500 text-center">
-              Clique para alternar
-            </span>
-          )}
-        </div>
+        {isCallback ? (
+          // COMPONENTE DE AGENDAMENTO (quando é Callback)
+          <div className="flex flex-col gap-2">
+            <span className="text-sm font-medium text-gray-700">3. Data e Hora</span>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant={"outline"}
+                  className={cn(
+                    "w-full justify-start text-left font-normal border-gray-200 text-black h-10",
+                    !selectedDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {selectedDate ? format(selectedDate, "PPP HH:mm", { locale: ptBR }) : <span>Selecione a data</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={(date) => {
+                    if (date && onDateChange) {
+                      const current = selectedDate || new Date();
+                      date.setHours(current.getHours(), current.getMinutes());
+                      onDateChange(date);
+                    }
+                  }}
+                  disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
+                  initialFocus
+                />
+                <div className="p-3 border-t border-border">
+                  <input 
+                    type="time" 
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    value={selectedDate ? format(selectedDate, "HH:mm") : ""}
+                    onChange={(e) => {
+                      if (onDateChange) {
+                        const [hours, minutes] = e.target.value.split(':');
+                        const newDate = new Date(selectedDate || new Date());
+                        newDate.setHours(parseInt(hours), parseInt(minutes));
+                        onDateChange(newDate);
+                      }
+                    }}
+                  />
+                </div>
+              </PopoverContent>
+            </Popover>
+            {dateError && <p className="text-red-500 text-xs mt-1">{dateError}</p>}
+          </div>
+        ) : (
+          // BOTÃO DE STATUS (quando é Venda)
+          <div className="flex flex-col gap-2">
+            <span className="text-sm font-medium text-gray-700">3. Status</span>
+            <button
+              type="button"
+              onClick={handleStatusChange}
+              disabled={!isStatusActive || (!isAdminOrSupervisor && !isRemoto)}
+              className={`
+                px-4 py-2 rounded-lg font-semibold text-sm transition-all
+                ${!isStatusActive || (!isAdminOrSupervisor && !isRemoto)
+                  ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                  : statusIndex === 0
+                    ? 'bg-yellow-200 text-yellow-800 hover:bg-yellow-300'
+                    : statusIndex === 1
+                      ? 'bg-green-200 text-green-800 hover:bg-green-300'
+                      : 'bg-red-200 text-red-800 hover:bg-red-300'
+                }
+              `}
+            >
+              {getStatusLabel()}
+            </button>
+            {isAdminOrSupervisor && isStatusActive && (
+              <span className="text-xs text-gray-500 text-center">
+                Clique para alternar
+              </span>
+            )}
+            {!isAdminOrSupervisor && isRemoto && isStatusActive && (
+              <span className="text-xs text-gray-500 text-center">
+                Clique para alternar
+              </span>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -30,6 +30,7 @@ type FetchedEventData = {
   channel: EventChannel;
   status: EventStatus;
   obs: string | null;
+  calledback_at: Date | null;
   operator: FetchedOperator;
   client: {
     frst_name: string;
@@ -40,13 +41,17 @@ type FetchedEventData = {
   };
 }
 
+// SCHEMA ATUALIZADO COM VALIDAÇÃO DE DATA
 const schema = z.object({
   name: z.string().min(3, { message: "Nome obrigatório" }),
   apelido: z.string().min(3, { message: "Apelido obrigatório" }),
   phone: z.string().min(8, { message: "Número obrigatório" }),
   address: z.string().min(15, { message: "Morada obrigatória" }),
   email: z.string().email({ message: "Email inválido" }).optional().or(z.literal('')),
-  obs: z.string().optional(), 
+  obs: z.string().optional(),
+  calledback_at: z.date().refine((date) => date > new Date(), {
+    message: "Escolha uma data posterior à actual",
+  }).optional(),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -59,7 +64,7 @@ const VendasForm = ({
   onSuccess,
 }: { 
   type: "create" | "edit"; 
-  tableLabel: string;
+  tableLabel: string; 
   formId: string;
   eventId?: number;
   onSuccess?: () => void;
@@ -79,8 +84,16 @@ const VendasForm = ({
   const [selectedOperatorId, setSelectedOperatorId] = useState<string>('');
   const { user: currentUser } = useUser();
 
+  const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: {
+      calledback_at: new Date(new Date().getTime() + 60000) // Default: Agora + 1 min
+    }
+  });
+
+  const selectedDate = watch("calledback_at");
+
   const isAdmin = (currentUser?.publicMetadata?.role as string)?.toLowerCase() === 'admin';
-  const isSupervisor = (currentUser?.publicMetadata?.role as string)?.toLowerCase() === 'supervisor';
   const currentUserRole = (currentUser?.publicMetadata?.role as string)?.toLowerCase() || 'operator';
   const currentUserName = `${currentUser?.firstName || ''} ${currentUser?.lastName || ''}`.trim() || 'N/A';
 
@@ -88,26 +101,17 @@ const VendasForm = ({
     setVendaStatus(values);
   }, []);
 
-  const { register, handleSubmit, setValue, formState: { errors } } = useForm<FormValues>({
-    resolver: zodResolver(schema),
-  });
+  const handleDateChange = useCallback((date: Date) => {
+    setValue('calledback_at', date, { shouldValidate: true });
+  }, [setValue]);
 
-  // MAPAS DE CONVERSÃO (UI -> DB ENUMS)
-  // Estes mapas garantem que o status é convertido corretamente
-  const typeMap: Record<string, EventType> = { 
-    'Venda': 'SALE', 
-    'Callback': 'CALLBACK' 
-  };
-  
-  const channelMap: Record<string, EventChannel> = { 
-    'F2F': 'F2F', 
-    'Remoto': 'REMOTE' 
-  };
-  
+  // MAPAS DE CONVERSÃO
+  const typeMap: Record<string, EventType> = { 'Venda': 'SALE', 'Callback': 'CALLBACK' };
+  const channelMap: Record<string, EventChannel> = { 'F2F': 'F2F', 'Remoto': 'REMOTE' };
   const statusMap: Record<string, EventStatus> = { 
-    'Projecto': 'PROJECT',   // ← UI -> DB
-    'Fechada': 'CLOSED',     // ← UI -> DB
-    'Perdida': 'LOST'        // ← UI -> DB
+    'Projecto': 'PROJECT', 
+    'Fechada': 'CLOSED', 
+    'Perdida': 'LOST' 
   };
 
   useEffect(() => {
@@ -117,22 +121,19 @@ const VendasForm = ({
         try {
           const data = await getEventById(eventId);
           if (!data) throw new Error(`Evento não encontrado.`);
-          setEventData(data as FetchedEventData);
-          setValue('name', data.client.frst_name);
-          setValue('apelido', data.client.lst_name || '');
-          setValue('email', data.client.email || '');
-          setValue('phone', data.client.phone);
-          setValue('address', data.client.address);
-          setValue('obs', data.obs || '');
+          const typedData = data as FetchedEventData;
+          setEventData(typedData);
+          setValue('name', typedData.client.frst_name);
+          setValue('apelido', typedData.client.lst_name || '');
+          setValue('email', typedData.client.email || '');
+          setValue('phone', typedData.client.phone);
+          setValue('address', typedData.client.address);
+          setValue('obs', typedData.obs || '');
+          if(typedData.calledback_at) setValue('calledback_at', new Date(typedData.calledback_at));
 
-          // CONVERSÃO REVERSA: DB -> UI
-          const revType = data.type === 'SALE' ? 'Venda' : 'Callback';
-          const revChan = data.channel === 'REMOTE' ? 'Remoto' : 'F2F';
-          const revStat = 
-            data.status === 'PROJECT' ? 'Projecto' : 
-            data.status === 'CLOSED' ? 'Fechada' : 
-            'Perdida';
-          
+          const revType = typedData.type === 'SALE' ? 'Venda' : 'Callback';
+          const revChan = typedData.channel === 'REMOTE' ? 'Remoto' : 'F2F';
+          const revStat = typedData.status === 'PROJECT' ? 'Projecto' : typedData.status === 'CLOSED' ? 'Fechada' : 'Perdida';
           setVendaStatus({ tipo: revType, modalidade: revChan, status: revStat });
         } catch (error) {
           toast.error("Erro ao carregar evento");
@@ -157,16 +158,9 @@ const VendasForm = ({
         const rawChannel = channelMap[vendaStatus.modalidade];
         let finalStatus = statusMap[vendaStatus.status];
 
-        // Regra: Callbacks são sempre 'PROJECT'
         if (rawType === 'CALLBACK') {
           finalStatus = 'PROJECT';
         }
-
-        console.log('📊 Status a enviar para BD:', {
-          UI_Status: vendaStatus.status,
-          DB_Status: finalStatus,
-          Tipo: rawType
-        });
 
         const payload = {
           clientData: {
@@ -178,12 +172,12 @@ const VendasForm = ({
           },
           type: rawType,
           channel: rawChannel,
-          status: finalStatus, // ← ESTE É O STATUS CORRETO DA BD
+          status: finalStatus,
           obs: formData.obs,
+          calledback_at: rawType === 'CALLBACK' ? formData.calledback_at : null,
         };
 
         let result;
-
         if (type === "create") {
           const opId = isAdmin && selectedOperatorId ? selectedOperatorId : currentUser?.id;
           if (!opId) throw new Error("Não autenticado");
@@ -194,15 +188,10 @@ const VendasForm = ({
         }
 
         if (result?.error) throw new Error(result.error);
-        
         toast.success("Operação concluída!", { id: tid });
-        
         if (onSuccess) onSuccess();
-        
-        await new Promise(resolve => setTimeout(resolve, 300));
         router.push('/lists/vendas');
         router.refresh();
-        
       } catch (error: any) {
         setIsSubmitting(false);
         toast.error(error.message || "Erro na submissão", { id: tid });
@@ -234,7 +223,7 @@ const VendasForm = ({
         <p className="text-xs text-gray-500 font-medium mb-1">Operador:</p>
         {type === "edit" ? (
           eventData?.operator && (
-            <div className="p-3 bg-gray-50 rounded-md">
+            <div className="p-3 bg-gray-50 rounded-md text-black">
               <span className="text-sm font-semibold">{eventData.operator.frst_name} {eventData.operator.lst_name}</span>
             </div>
           )
@@ -255,6 +244,9 @@ const VendasForm = ({
           onValuesChange={handleSwitchValuesChange} 
           initialValues={vendaStatus}
           userRole={currentUserRole}
+          selectedDate={selectedDate}
+          onDateChange={handleDateChange}
+          dateError={errors.calledback_at?.message}
         />
       </div>
 

@@ -177,9 +177,22 @@ const FormModal = ({ table, type, data, id, userId }: any) => {
     return SelectedForm ? (
       <>
         {SelectedForm(type, tableLabel, formId, id as number, userId, handleFormSuccess)}
-        <button form={formId} className="bg-purple-600 text-white p-2 rounded-md mt-4 w-full hover:bg-purple-700 transition">
-          {type === "create" ? "Criar" : "Atualizar"}
-        </button>
+        <div className="flex gap-3 mt-4">
+          <button 
+            type="button"
+            onClick={() => setOpen(false)}
+            className="bg-gray-200 text-gray-800 py-2 px-6 rounded-md hover:bg-gray-500 hover:text-white transition flex-1"
+          >
+            Cancelar
+          </button>
+          <button 
+            form={formId} 
+            type="submit"
+            className="bg-purple-600 text-white py-2 px-6 rounded-md hover:bg-purple-700 transition flex-1"
+          >
+            {type === "create" ? "Criar" : "Atualizar"}
+          </button>
+        </div>
       </>
     ) : (
       <div className="p-4 text-red-500 text-center">
@@ -200,9 +213,6 @@ const FormModal = ({ table, type, data, id, userId }: any) => {
         <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center">
           <div className="bg-white p-8 rounded-lg relative w-[90%] md:w-[70%] lg:w-[60%] xl:w-[50%] max-h-[90vh] overflow-y-auto">
             <Form />
-            <div className="absolute top-4 right-4 cursor-pointer hover:bg-gray-100 rounded-full p-1 transition" onClick={() => setOpen(false)}>
-              <Image src="/close.png" alt="" width={14} height={14} />
-            </div>
           </div>
         </div>
       )}
