@@ -2,7 +2,7 @@ import BigCalendar from "@/components/BigCalendar"
 import EventCalendar from "@/components/EventCalendar"
 import ListaVendas from "@/components/ListaVendas"
 
-const operPage = () => {
+const operadorPage = () => {
   return (
     <div className='w-full flex px-4 gap-4 flex-col md:flex-row lg:flex-row'>
       {/*left side*/}
@@ -23,4 +23,4 @@ const operPage = () => {
   )
 }
 
-export default operPage
+export default operadorPage

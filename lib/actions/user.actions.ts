@@ -1,4 +1,4 @@
-"use server"
+"use server";
 
 import { clerkClient } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
@@ -20,24 +20,34 @@ async function findUser(paramId: string | number) {
   return null;
 }
 
+function revalidateUserLists() {
+  revalidatePath("/lists/operadores");
+  revalidatePath("/lists/administradores"); 
+  revalidatePath("/lists/supervisores");
+  revalidatePath("/lists/d2d");
+}
+
+function revalidateEventLists() {
+  revalidatePath("/lists/vendas");
+  revalidatePath("/lists/callbacks");
+}
+
 // ==========================================
-// LISTAS DE LEITURA (GETTERS)
+// GETTERS (LISTAS PARA AS PÁGINAS)
 // ==========================================
 
-// 1. OPERADORES
 export async function getOperatorsList() {
   try {
     return await prisma.user.findMany({
-      where: { is_active: true },
+      where: { role: 'OPERATOR', is_active: true },
       orderBy: { frst_name: 'asc' },
     });
   } catch (error) {
-    console.error('❌ Erro ao buscar operadores:', error);
+    console.error('Erro ao buscar operadores:', error);
     return [];
   }
 }
 
-// 2. ADMINISTRADORES
 export async function getAdministratorsList() {
   try {
     return await prisma.user.findMany({
@@ -48,7 +58,7 @@ export async function getAdministratorsList() {
       orderBy: { frst_name: 'asc' },
     });
   } catch (error) {
-    console.error('❌ Erro ao buscar administradores:', error);
+    console.error('Erro ao buscar administradores:', error);
     return [];
   }
 }
@@ -57,54 +67,27 @@ export async function getOperatorById(paramId: string | number) {
   try {
     const user = await findUser(paramId);
     if (!user) return null;
-    return {
-      id: user.id,
-      userId: user.userId,
-      email: user.email,
-      internalId: user.internalId,
-      frst_name: user.frst_name,
-      lst_name: user.lst_name,
-      phone: user.phone,
-      role: user.role,
-      is_active: user.is_active,
-      created_at: user.created_at.toISOString(),
-    };
+    return user; // Retorna o objeto completo do Prisma para não quebrar a tipagem da tua página
   } catch (error) {
-    console.error("❌ Erro ao buscar operador:", error);
     return null;
   }
 }
 
-// 3. CALLBACKS
 export async function getCallbacksList() {
   try {
-    const callbacks = await prisma.event.findMany({
+    return await prisma.event.findMany({
       where: { type: 'CALLBACK' },
-      include: {
-        user: true, // Dados do Operador
-        client: true, // Dados do Cliente
-      },
+      include: { user: true, client: true },
       orderBy: { created_at: 'desc' },
     });
-    return callbacks;
   } catch (error) {
-    console.error('❌ Erro ao buscar callbacks:', error);
     return [];
   }
 }
 
 // ==========================================
-// GESTÃO DE UTILIZADORES (CRUD)
+// CRUD UTILIZADORES (SYNC CLERK/PRISMA)
 // ==========================================
-
-// Função auxiliar para revalidar todas as listas de users
-// Isto garante que se mudares um role, a lista antiga e a nova atualizam
-function revalidateUserLists() {
-  revalidatePath("/lists/operadores");
-  revalidatePath("/lists/administradores"); 
-  revalidatePath("/lists/supervisores"); // Adicionado baseado na Sidebar
-  revalidatePath("/lists/d2d"); // Adicionado baseado na Sidebar (Vendedores)
-}
 
 export async function createSystemUser(data: {
   email: string;
@@ -115,12 +98,11 @@ export async function createSystemUser(data: {
   role: UserRole;
 }) {
   const passwordToUse = data.internalId;
-  if (passwordToUse.length < 4) return { error: 'ID Interno deve ter 4 caracteres' };
+  if (passwordToUse.length < 4) return { error: 'ID Interno deve ter pelo menos 4 caracteres' };
 
   const existingUser = await prisma.user.findFirst({
     where: { OR: [{ internalId: data.internalId }, { email: data.email }] }
   });
-
   if (existingUser) return { error: 'Utilizador já existe' };
 
   const clerk = await clerkClient();
@@ -132,10 +114,9 @@ export async function createSystemUser(data: {
       emailAddress: [data.email],
       password: passwordToUse,
       firstName: data.name,
-      lastName: data.apelido || '',
+      lastName: data.apelido,
       publicMetadata: { role: data.role.toLowerCase(), internalId: data.internalId },
       skipPasswordChecks: true,
-      skipPasswordRequirement: true, 
     });
 
     await prisma.user.create({
@@ -144,21 +125,17 @@ export async function createSystemUser(data: {
         email: data.email,
         internalId: data.internalId,
         frst_name: data.name,
-        lst_name: data.apelido || '',
+        lst_name: data.apelido,
         phone: data.phone || null,
         role: data.role,
         is_active: true,
       }
     });
 
-    // Atualiza apenas as listas necessárias
     revalidateUserLists();
     return { success: true, message: `Utilizador ${data.internalId} criado!` };
-
   } catch (error: any) {
-    if (newClerkUser?.id) {
-      try { await clerk.users.deleteUser(newClerkUser.id); } catch (e) {}
-    }
+    if (newClerkUser?.id) await clerk.users.deleteUser(newClerkUser.id);
     return { error: error.message || 'Erro ao criar utilizador' };
   }
 }
@@ -169,9 +146,11 @@ export async function updateSystemUser(paramId: string | number, data: any) {
     if (!user) return { error: 'Utilizador não encontrado' };
 
     const clerk = await clerkClient();
-    const clerkUpdate: any = { firstName: data.name, lastName: data.apelido };
-    if (data.password?.trim()) clerkUpdate.password = data.password;
-    await clerk.users.updateUser(user.userId, clerkUpdate);
+    await clerk.users.updateUser(user.userId, { 
+      firstName: data.name, 
+      lastName: data.apelido,
+      password: data.password || undefined 
+    });
 
     await prisma.user.update({
       where: { id: user.id },
@@ -183,9 +162,7 @@ export async function updateSystemUser(paramId: string | number, data: any) {
       },
     });
 
-    // Atualiza apenas as listas necessárias
     revalidateUserLists();
-
     return { success: true, message: 'Atualizado com sucesso' };
   } catch (error: any) {
     return { error: error.message };
@@ -201,7 +178,6 @@ export async function deleteUserAction(userIdOrId: string | number) {
     await prisma.user.delete({ where: { id: user.id } });
     try { await clerk.users.deleteUser(user.userId); } catch (e) {}
 
-    // Atualiza apenas as listas necessárias
     revalidateUserLists();
     return { success: true, message: 'Eliminado com sucesso' };
   } catch (error: any) {
@@ -210,74 +186,30 @@ export async function deleteUserAction(userIdOrId: string | number) {
 }
 
 // ==========================================
-// VENDAS / EVENTOS (CRUD)
+// VENDAS / EVENTOS
 // ==========================================
 
-// Função auxiliar para revalidar listas de eventos
-function revalidateEventLists() {
-  revalidatePath("/lists/vendas");
-  revalidatePath("/lists/callbacks");
-  revalidatePath("/lists/dinamicas"); // Sugestão: caso uses eventos aqui também
-}
-
 export async function getEventById(id: number) {
-  try {
-    const event = await prisma.event.findUnique({
-      where: { id },
-      include: {
-        client: { select: { frst_name: true, lst_name: true, email: true, phone: true, address: true } },
-        user: { select: { id: true, userId: true, internalId: true, frst_name: true, lst_name: true, role: true } }
-      }
-    });
-
-    if (!event) return null;
-
-    return {
-      eventId: event.id,
-      eventIdString: event.event_id,
-      createdAt: event.created_at,
-      type: event.type,
-      channel: event.channel,
-      status: event.status,
-      obs: event.obs,
-      calledback_at: event.calledback_at,
-      operator: {
-        id: event.user.id,
-        userId: event.user.userId,
-        internalId: event.user.internalId,
-        frst_name: event.user.frst_name,
-        lst_name: event.user.lst_name,
-        role: event.user.role,
-      },
-      client: event.client,
-    };
-  } catch (error) {
-    return null;
-  }
+  return await prisma.event.findUnique({
+    where: { id },
+    include: { client: true, user: true }
+  });
 }
 
-export async function createEvent(data: {
-  clerkUserId: string;
-  clientData: any;
-  type: EventType;
-  channel: EventChannel;
-  status: EventStatus;
-  obs?: string;
-  calledback_at?: Date | null;
-}) {
+export async function createEvent(data: any) {
   try {
     const user = await prisma.user.findUnique({ where: { userId: data.clerkUserId } });
     if (!user) return { error: 'Utilizador não encontrado' };
 
-    const eventId = `EVT_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const eventId = `EVT_${Date.now()}`;
 
     await prisma.$transaction(async (tx) => {
       const client = await tx.client.create({
         data: {
           frst_name: data.clientData.frst_name,
-          lst_name: data.clientData.lst_name || null,
+          lst_name: data.clientData.lst_name,
           phone: data.clientData.phone,
-          email: data.clientData.email || null,
+          email: data.clientData.email,
           address: data.clientData.address,
         }
       });
@@ -290,86 +222,52 @@ export async function createEvent(data: {
           type: data.type,
           channel: data.channel,
           status: data.status,
-          obs: data.obs || null,
-          calledback_at: data.calledback_at || null,
+          obs: data.obs,
+          calledback_at: data.calledback_at,
         }
       });
     });
 
     revalidateEventLists();
-
-    return { success: true, message: 'Venda criada com sucesso' };
+    return { success: true };
   } catch (error: any) {
     return { error: error.message };
   }
 }
 
-export async function updateEvent(
-  eventId: number,
-  data: {
-    clientData: {
-      frst_name: string;
-      lst_name: string;
-      phone: string;
-      email?: string;
-      address: string;
-    };
-    type: EventType;
-    channel: EventChannel;
-    status: EventStatus;
-    obs?: string;
-    calledback_at?: Date | null;
-  }
-) {
+export async function updateEvent(eventId: number, data: any) {
   try {
-    const event = await prisma.event.findUnique({
-      where: { id: eventId },
-      select: { clientId: true }
-    });
-
-    if (!event) return { error: 'Evento não encontrado' };
+    const event = await prisma.event.findUnique({ where: { id: eventId } });
+    if (!event) return { error: 'Não encontrado' };
 
     await prisma.$transaction(async (tx) => {
       await tx.client.update({
         where: { id: event.clientId },
-        data: {
-          frst_name: data.clientData.frst_name,
-          lst_name: data.clientData.lst_name || null,
-          phone: data.clientData.phone,
-          email: data.clientData.email || null,
-          address: data.clientData.address,
-        }
+        data: data.clientData
       });
-
       await tx.event.update({
         where: { id: eventId },
         data: {
           type: data.type,
           channel: data.channel,
           status: data.status,
-          obs: data.obs || null,
-          calledback_at: data.calledback_at || null,
+          obs: data.obs,
+          calledback_at: data.calledback_at,
         }
       });
     });
 
     revalidateEventLists();
-
-    return { success: true, message: 'Venda atualizada com sucesso' };
+    return { success: true };
   } catch (error: any) {
-    console.error("Erro update:", error);
-    return { error: error.message || 'Erro ao atualizar venda' };
+    return { error: error.message };
   }
 }
 
 export async function deleteEventAction(eventId: number) {
   try {
-    const event = await prisma.event.findUnique({
-      where: { id: eventId },
-      include: { client: true }
-    });
-
-    if (!event) return { error: 'Evento não encontrado' };
+    const event = await prisma.event.findUnique({ where: { id: eventId } });
+    if (!event) return { error: 'Não encontrado' };
 
     await prisma.$transaction(async (tx) => {
       await tx.event.delete({ where: { id: eventId } });
@@ -377,8 +275,7 @@ export async function deleteEventAction(eventId: number) {
     });
 
     revalidateEventLists();
-
-    return { success: true, message: 'Venda eliminada com sucesso' };
+    return { success: true };
   } catch (error: any) {
     return { error: error.message };
   }

@@ -6,13 +6,13 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { deleteUserAction, deleteEventAction, getOperatorById, getEventById } from "@/lib/actions/user.actions";
-import {JSX} from "react";
+import { JSX } from "react";
 import { toast } from "sonner";
 
+// Imports Dinâmicos
 const OperadoresForm = dynamic(() => import("./Forms/OperadoresForm"), { ssr: false });
 const VendasForm = dynamic(() => import("./Forms/VendasForm"), { ssr: false });
 const CallbacksForm = dynamic(() => import("./Forms/CallbacksForm"), { ssr: false });
-const DinanmicasForm = dynamic(() => import("./Forms/DinamicasForm"), { ssr: false });
 const SupervisoresForm = dynamic(() => import("./Forms/SupervisorsForm"), { ssr: false });
 const AdministradoresForm = dynamic(() => import("./Forms/AdministradoresForm"), { ssr: false });
 
@@ -22,6 +22,7 @@ type DeleteConfirmData = {
   displayInfo: string;
 } | null;
 
+// Mapeamento dos Formulários
 const forms: { 
   [key: string]: (
     type: "create" | "edit", 
@@ -29,7 +30,8 @@ const forms: {
     formId: string, 
     id?: number, 
     userId?: string,
-    onSuccess?: () => void
+    onSuccess?: () => void,
+    data?: any  // ✅ ADICIONADO: Para passar dados do calendário
   ) => JSX.Element 
 } = {
   operador: (type, tableLabel, formId, id, userId, onSuccess) => (
@@ -38,15 +40,24 @@ const forms: {
   operadores: (type, tableLabel, formId, id, userId, onSuccess) => (
     <OperadoresForm type={type} tableLabel={tableLabel} formId={formId} userId={userId} onSuccess={onSuccess} />
   ),
-  vendas: (type, tableLabel, formId, id, userId, onSuccess) => (
-    <VendasForm type={type} tableLabel={tableLabel} formId={formId} eventId={id} onSuccess={onSuccess} />
+  vendas: (type, tableLabel, formId, id, userId, onSuccess, data) => (
+    <VendasForm type={type} tableLabel={tableLabel} formId={formId} eventId={id} onSuccess={onSuccess} initialData={data} />
   ),
-  events: (type, tableLabel, formId, id, userId, onSuccess) => (
-    <VendasForm type={type} tableLabel={tableLabel} formId={formId} eventId={id} onSuccess={onSuccess} />
+  callbacks: (type, tableLabel, formId, id, userId, onSuccess, data) => (
+    <CallbacksForm type={type} tableLabel={tableLabel} formId={formId} eventId={id} onSuccess={onSuccess} initialData={data} />
   ),
+  events: (type, tableLabel, formId, id, userId, onSuccess, data) => (
+    <VendasForm type={type} tableLabel={tableLabel} formId={formId} eventId={id} onSuccess={onSuccess} initialData={data} />
+  ),
+  supervisores: (type, tableLabel, formId, id, userId, onSuccess) => (
+    <SupervisoresForm type={type} tableLabel={tableLabel} formId={formId} userId={userId} onSuccess={onSuccess} />
+  ),
+  administradores: (type, tableLabel, formId, id, userId, onSuccess) => (
+    <AdministradoresForm type={type} tableLabel={tableLabel} formId={formId} userId={userId} onSuccess={onSuccess} />
+  )
 };
 
-const FormModal = ({ table, type, data, id, userId }: any) => {
+const FormModal = ({ table, type, data, id, userId, forcedOpen, onClose }: any) => {
   const size = type === "create" ? "w-8 h-8" : "w-7 h-7";
   const bgColor = type === "create" ? "bg-purple-600" : type === "edit" ? "bg-blue-400" : "bg-red-500";
   const [open, setOpen] = useState(false);
@@ -55,25 +66,50 @@ const FormModal = ({ table, type, data, id, userId }: any) => {
   const router = useRouter();
   const { user } = useUser();
 
+  // =========================================================
+  // LÓGICA DE PERMISSÃO
+  // =========================================================
   const canCreate = () => {
     if (type !== "create") return true;
     const userRole = (user?.publicMetadata?.role as string)?.toLowerCase();
-    return userRole === "admin" || userRole === "supervisor";
+
+    // Permite Operadores e Vendedores criarem Vendas/Events/Callbacks
+    if (table === "vendas" || table === "events" || table === "callbacks") {
+      return ["admin", "super-admin", "supervisor", "operador", "vendedor"].includes(userRole || "");
+    }
+
+    // Para criar USERS (Operadores, Admins), mantém restrito
+    return ["admin", "super-admin", "supervisor"].includes(userRole || "");
   };
 
+  // =========================================================
+  // SUPORTE PARA ABERTURA AUTOMÁTICA (BIG CALENDAR)
+  // =========================================================
+  useEffect(() => {
+    if (forcedOpen) {
+      if (canCreate()) {
+        setOpen(true);
+      } else {
+        toast.error("Sem permissão para realizar esta acção.");
+        if (onClose) onClose(); // ✅ Fecha se não tiver permissão
+      }
+    }
+  }, [forcedOpen]);
+
+  // Lógica de Carregamento para Delete
   useEffect(() => {
     if (type === "delete" && open) {
       const fetchDeleteData = async () => {
         setIsLoadingDelete(true);
         try {
-          const isEvent = table === "vendas" || table === "events";
+          const isEvent = table === "vendas" || table === "events" || table === "callbacks";
           if (isEvent && id) {
             const eventData = await getEventById(Number(id));
             if (eventData) {
               setDeleteData({
                 type: 'event',
                 displayName: `${eventData.client.frst_name} ${eventData.client.lst_name || ''}`,
-                displayInfo: `ID: ${eventData.eventIdString} | Operador: ${eventData.operator.frst_name}`,
+                displayInfo: `ID: ${eventData.event_id} | Operador: ${eventData.user.frst_name}`,
               });
             }
           } else {
@@ -102,13 +138,13 @@ const FormModal = ({ table, type, data, id, userId }: any) => {
   const handleDelete = async () => {
     const tid = toast.loading("A eliminar...");
     try {
-      const isEvent = table === "vendas" || table === "events";
+      const isEvent = table === "vendas" || table === "events" || table === "callbacks";
       const res = isEvent 
         ? await deleteEventAction(Number(id)) 
         : await deleteUserAction(userId || id);
       if (res?.error) throw new Error(res.error);
       toast.success("Eliminado com sucesso!", { id: tid });
-      setOpen(false);
+      handleCloseModal();
       router.refresh();
     } catch (err: any) {
       toast.error(err.message, { id: tid });
@@ -123,8 +159,14 @@ const FormModal = ({ table, type, data, id, userId }: any) => {
     setOpen(true);
   };
 
-  const handleFormSuccess = () => {
+  const handleCloseModal = () => {
     setOpen(false);
+    if (onClose) onClose(); // ✅ Callback para BigCalendar
+  };
+
+  const handleFormSuccess = () => {
+    handleCloseModal();
+    router.refresh();
   };
 
   const Form = () => {
@@ -155,7 +197,7 @@ const FormModal = ({ table, type, data, id, userId }: any) => {
 
           <div className="flex gap-3 justify-center mt-4">
             <button 
-              onClick={() => setOpen(false)}
+              onClick={handleCloseModal}
               className="bg-gray-300 text-gray-800 py-2 px-6 rounded-md hover:bg-gray-400 transition"
             >
               Cancelar
@@ -176,11 +218,14 @@ const FormModal = ({ table, type, data, id, userId }: any) => {
 
     return SelectedForm ? (
       <>
-        {SelectedForm(type, tableLabel, formId, id as number, userId, handleFormSuccess)}
+        {/* ✅ Passa 'data' para o form pré-preencher campos */}
+        {SelectedForm(type, tableLabel, formId, id as number, userId, handleFormSuccess, data)}
+        
+        {/* Botões de Acção do Rodapé */}
         <div className="flex gap-3 mt-4">
           <button 
             type="button"
-            onClick={() => setOpen(false)}
+            onClick={handleCloseModal}
             className="bg-gray-200 text-gray-800 py-2 px-6 rounded-md hover:bg-gray-500 hover:text-white transition flex-1"
           >
             Cancelar
@@ -203,19 +248,26 @@ const FormModal = ({ table, type, data, id, userId }: any) => {
 
   return (
     <>
-      <button 
-        className={`${size} flex items-center justify-center rounded-full ${bgColor} hover:opacity-90 transition`} 
-        onClick={handleOpenModal}
-      >
-        <Image src={`/${type}.png`} alt="" width={16} height={16} />
-      </button>
-      {open && (
+      {/* Botão de Trigger (Só renderiza se não for abertura forçada) */}
+      {!forcedOpen && (
+        <button 
+          className={`${size} flex items-center justify-center rounded-full ${bgColor} hover:opacity-90 transition`} 
+          onClick={handleOpenModal}
+        >
+          <Image src={`/${type}.png`} alt="" width={16} height={16} />
+        </button>
+      )}
+
+      {open && !forcedOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center">
           <div className="bg-white p-8 rounded-lg relative w-[90%] md:w-[70%] lg:w-[60%] xl:w-[50%] max-h-[90vh] overflow-y-auto">
             <Form />
           </div>
         </div>
       )}
+
+      {/* ✅ Quando forcedOpen=true (BigCalendar), só renderiza o Form */}
+      {forcedOpen && <Form />}
     </>
   );
 };
