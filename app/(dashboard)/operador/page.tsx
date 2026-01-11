@@ -1,26 +1,35 @@
+"use client" // ✅ ADICIONADO: Necessário para usar useState
+
+import { useState } from "react"; // ✅ ADICIONADO: Para criar o state
 import BigCalendar from "@/components/BigCalendar"
 import EventCalendar from "@/components/EventCalendar"
 import ListaVendas from "@/components/ListaVendas"
 
-const operadorPage = () => {
+const OperadorPage = () => {
+  // ✅ ADICIONADO: State que conecta os dois calendários
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+
   return (
     <div className='w-full flex px-4 gap-4 flex-col md:flex-row lg:flex-row'>
+      
       {/*left side*/}
       <div className="w-full flex lg:w-2/3 dark:bg-white rounded-lg p-4 text-black">
-      <BigCalendar/>
+        {/* ✅ MODIFICADO: Passa a data selecionada para o BigCalendar */}
+        <BigCalendar selectedDate={selectedDate} />
       </div>
 
       {/*right side*/}
       <div className="w-full flex gap-4 lg:w-1/3 dark:bg-gray-900 rounded-r-lg">
         <h2 className="text-lg font-semibold">
-          <EventCalendar />
+          {/* ✅ MODIFICADO: Passa o handler para receber a data selecionada */}
+          <EventCalendar onDateSelect={setSelectedDate} />
           <div className="mt-4"></div>
           <ListaVendas />
         </h2>
       </div>
       
-      </div>
+    </div>
   )
 }
 
-export default operadorPage
+export default OperadorPage

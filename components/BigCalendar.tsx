@@ -8,14 +8,38 @@ import FormModal from '@/components/FormModal'
 
 const localizer = dayjsLocalizer(dayjs)
 
-const BigCalendar = () => {
+interface BigCalendarProps {
+  selectedDate?: Date; // ✅ Recebe a data do EventCalendar
+}
+
+const BigCalendar = ({ selectedDate }: BigCalendarProps) => {
   const [view, setView] = useState<View>('week');
+  const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [openModal, setOpenModal] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [selectedSlot, setSelectedSlot] = useState<{ start: Date; end: Date } | null>(null);
 
+  // ✅ Quando recebe uma nova data do EventCalendar
+  useState(() => {
+    if (selectedDate) {
+      console.log('🔄 BigCalendar mudando para data:', selectedDate);
+      setCurrentDate(selectedDate);
+      setView('day'); // ✅ Muda para vista diária
+    }
+  });
+
+  // ✅ Atualiza quando selectedDate muda
+  if (selectedDate && selectedDate.getTime() !== currentDate.getTime()) {
+    setCurrentDate(selectedDate);
+    setView('day');
+  }
+
   const handleViewChange = (newView: View) => {
     setView(newView);
+  }
+
+  const handleNavigate = (newDate: Date) => {
+    setCurrentDate(newDate);
   }
 
   // 🎯 Quando clica num evento existente
@@ -53,7 +77,9 @@ const BigCalendar = () => {
         endAccessor="end"
         style={{ height: "100%", width: "100%" }}
         view={view}
+        date={currentDate} // ✅ Controla a data exibida
         onView={handleViewChange}
+        onNavigate={handleNavigate} // ✅ Atualiza quando user navega
         views={{ month: false, week: true, day: true, agenda: false }}
         min={new Date(0, 0, 0, 10, 0, 0)} // 10:00
         max={new Date(0, 0, 0, 20, 0, 0)} // 20:00

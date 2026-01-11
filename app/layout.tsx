@@ -1,11 +1,9 @@
 import type { Metadata } from "next";
-import {
-  ClerkProvider
-} from '@clerk/nextjs'
+import { ClerkProvider } from '@clerk/nextjs'
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
-
+import { DateRangeProvider } from "@/components/contexts/DateRangeContext"; // ✅ CORRIGIDO
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,36 +27,27 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}>
-    <html lang="en" className="dark" suppressHydrationWarning>
-      <body
-        className={`
-          ${geistSans.variable} ${geistMono.variable} antialiased flex 
-          bg-white text-slate-900 
-          dark:bg-linear-to-b dark:from-neutral-900 dark:to-neutral-700 
-          shadow-lg shadow-black/90 dark:text-slate-50
-          
-          /* CORREÇÃO 1: Adicionar bg-no-repeat e bg-cover para evitar repetição do gradient */
-          bg-no-repeat bg-cover 
-        `}
-      >
-        
-        {/* CORREÇÃO 2: Adicionar flex-col para que os elementos (Navbar + Div Conteúdo) se empilhem verticalmente */}
-        <main className="w-full h-screen flex flex-col">
-
-         
-
-            {/* CORREÇÃO 3: Usar flex-grow para a div de conteúdo expandir e ocupar todo o espaço vertical restante */}
+      <html lang="en" className="dark" suppressHydrationWarning>
+        <body
+          className={`
+            ${geistSans.variable} ${geistMono.variable} antialiased flex 
+            bg-white text-slate-900 
+            dark:bg-linear-to-b dark:from-neutral-900 dark:to-neutral-700 
+            shadow-lg shadow-black/90 dark:text-slate-50
+            bg-no-repeat bg-cover 
+          `}
+        >
+          <main className="w-full h-screen flex flex-col">
             <div className="p-4 grow overflow-y-auto">
-
-              {children}
+              {/* ✅ Provider envolve todo o conteúdo */}
+              <DateRangeProvider>
+                {children}
+              </DateRangeProvider>
               <Toaster position="top-center" richColors closeButton />
-
             </div>
-        </main>
-        
-      </body>
-    </html>
+          </main>
+        </body>
+      </html>
     </ClerkProvider>
-   
   );
 }

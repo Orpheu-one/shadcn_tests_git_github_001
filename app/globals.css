@@ -250,7 +250,7 @@
 
 .react-calendar__tile:enabled:hover,
 .react-calendar__tile:enabled:focus {
-  background-color:  oklch(0.507 0.265 303.9 / 50%);
+  background-color: oklch(0.507 0.265 303.9 / 50%);
   border-radius: 8px;
 }
 
@@ -289,6 +289,48 @@
   background-color: #e6e6e6;
 }
 
+/* ============================================== */
+/* ✅ NOVO: RANGE SELECTION PURPLE HIGHLIGHT     */
+/* ============================================== */
+
+/* Range Start & End - Purple 500 */
+.calendar-range-mode .react-calendar__tile--rangeStart,
+.calendar-range-mode .react-calendar__tile--rangeEnd {
+  background: #a855f7 !important; /* Tailwind purple-500 */
+  color: white !important;
+  border-radius: 8px !important;
+  font-weight: bold !important;
+}
+
+/* Range Middle Days - Purple 200 */
+.calendar-range-mode .react-calendar__tile--range {
+  background: #e9d5ff !important; /* Tailwind purple-200 */
+  color: #6b21a8 !important; /* Tailwind purple-800 */
+  border-radius: 0 !important;
+}
+
+/* Hover no range - Purple 300 */
+.calendar-range-mode .react-calendar__tile--rangeStart:hover,
+.calendar-range-mode .react-calendar__tile--rangeEnd:hover {
+  background: #c084fc !important; /* Tailwind purple-400 */
+}
+
+/* Range + Hoje (overlap) */
+.calendar-range-mode .react-calendar__tile--now.react-calendar__tile--range {
+  background: #f3e8ff !important; /* Tailwind purple-100 */
+  color: #7c3aed !important; /* Tailwind purple-600 */
+  font-weight: bold !important;
+  border: 2px solid #a855f7 !important;
+}
+
+/* Range + Weekend */
+.calendar-range-mode .react-calendar__month-view__days__day--weekend.react-calendar__tile--range {
+  background: #e9d5ff !important;
+  color: #6b21a8 !important;
+}
+
+/* ============================================== */
+
 /*React-Big-Calendar*/
 
 @charset "UTF-8";
@@ -302,8 +344,8 @@ button.rbc-btn {
   overflow: visible;
   text-transform: none;
   -webkit-appearance: button;
-     -moz-appearance: button;
-          appearance: button;
+  -moz-appearance: button;
+  appearance: button;
   cursor: pointer;
 }
 
@@ -318,7 +360,7 @@ button.rbc-input::-moz-focus-inner {
 
 .rbc-calendar {
   -webkit-box-sizing: border-box;
-          box-sizing: border-box;
+  box-sizing: border-box;
   height: 100%;
   width: 100%;
   display: -webkit-box;
@@ -326,11 +368,11 @@ button.rbc-input::-moz-focus-inner {
   display: flex;
   -webkit-box-orient: vertical;
   -webkit-box-direction: normal;
-      -ms-flex-direction: column;
-          flex-direction: column;
+  -ms-flex-direction: column;
+  flex-direction: column;
   -webkit-box-align: stretch;
-      -ms-flex-align: stretch;
-          align-items: stretch;
+  -ms-flex-align: stretch;
+  align-items: stretch;
 }
 
 .rbc-m-b-negative-3 {
@@ -345,7 +387,7 @@ button.rbc-input::-moz-focus-inner {
 .rbc-calendar *:before,
 .rbc-calendar *:after {
   -webkit-box-sizing: inherit;
-          box-sizing: inherit;
+  box-sizing: inherit;
 }
 
 .rbc-abs-full, .rbc-row-bg {
@@ -379,8 +421,8 @@ button.rbc-input::-moz-focus-inner {
 .rbc-header {
   overflow: hidden;
   -webkit-box-flex: 1;
-      -ms-flex: 1 0 0%;
-          flex: 1 0 0%;
+  -ms-flex: 1 0 0%;
+  flex: 1 0 0%;
   text-overflow: ellipsis;
   white-space: nowrap;
   padding: 0 3px;
@@ -412,16 +454,16 @@ button.rbc-input::-moz-focus-inner {
   border: none;
   cursor: pointer;
   -webkit-user-select: text;
-     -moz-user-select: text;
-      -ms-user-select: text;
-          user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
 }
 
 .rbc-row-content {
   position: relative;
   -moz-user-select: none;
-   -ms-user-select: none;
-       user-select: none;
+  -ms-user-select: none;
+  user-select: none;
   -webkit-user-select: none;
   z-index: 4;
 }
@@ -432,18 +474,17 @@ button.rbc-input::-moz-focus-inner {
   display: flex;
   -webkit-box-orient: vertical;
   -webkit-box-direction: normal;
-      -ms-flex-direction: column;
-          flex-direction: column;
+  -ms-flex-direction: column;
+  flex-direction: column;
   height: 100%;
 }
 .rbc-row-content-scrollable .rbc-row-content-scroll-container {
   height: 100%;
   overflow-y: scroll;
-  -ms-overflow-style: none; /* IE and Edge */
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE and Edge */
-  scrollbar-width: none; /* Firefox */
-  /* Hide scrollbar for Chrome, Safari and Opera */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 .rbc-row-content-scrollable .rbc-row-content-scroll-container::-webkit-scrollbar {
   display: none;
@@ -458,20 +499,20 @@ button.rbc-input::-moz-focus-inner {
   display: -ms-flexbox;
   display: flex;
   -ms-flex-wrap: wrap;
-      flex-wrap: wrap;
+  flex-wrap: wrap;
   -webkit-box-pack: center;
-      -ms-flex-pack: center;
-          justify-content: center;
+  -ms-flex-pack: center;
+  justify-content: center;
   -webkit-box-align: center;
-      -ms-flex-align: center;
-          align-items: center;
+  -ms-flex-align: center;
+  align-items: center;
   margin-bottom: 10px;
   font-size: 16px;
 }
 .rbc-toolbar .rbc-toolbar-label {
   -webkit-box-flex: 1;
-      -ms-flex-positive: 1;
-          flex-grow: 1;
+  -ms-flex-positive: 1;
+  flex-grow: 1;
   padding: 0 10px;
   text-align: center;
 }
@@ -492,7 +533,7 @@ button.rbc-input::-moz-focus-inner {
 .rbc-toolbar button:active, .rbc-toolbar button.rbc-active {
   background-image: none;
   -webkit-box-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
-          box-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
+  box-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
   background-color: #e6e6e6;
   border-color: #adadad;
 }
@@ -554,16 +595,16 @@ button.rbc-input::-moz-focus-inner {
   .rbc-toolbar {
     -webkit-box-orient: vertical;
     -webkit-box-direction: normal;
-        -ms-flex-direction: column;
-            flex-direction: column;
+    -ms-flex-direction: column;
+    flex-direction: column;
   }
 }
 .rbc-event, .rbc-day-slot .rbc-background-event {
   border: none;
   -webkit-box-sizing: border-box;
-          box-sizing: border-box;
+  box-sizing: border-box;
   -webkit-box-shadow: none;
-          box-shadow: none;
+  box-shadow: none;
   margin: 0;
   padding: 2px 5px;
   background-color: #3174ad;
@@ -590,7 +631,7 @@ button.rbc-input::-moz-focus-inner {
 
 .rbc-event-overlaps {
   -webkit-box-shadow: -1px 1px 5px 0px rgba(51, 51, 51, 0.5);
-          box-shadow: -1px 1px 5px 0px rgba(51, 51, 51, 0.5);
+  box-shadow: -1px 1px 5px 0px rgba(51, 51, 51, 0.5);
 }
 
 .rbc-event-continues-prior {
@@ -619,8 +660,8 @@ button.rbc-input::-moz-focus-inner {
   display: flex;
   -webkit-box-orient: horizontal;
   -webkit-box-direction: normal;
-      -ms-flex-direction: row;
-          flex-direction: row;
+  -ms-flex-direction: row;
+  flex-direction: row;
 }
 
 .rbc-row-segment {
@@ -651,15 +692,15 @@ button.rbc-input::-moz-focus-inner {
   display: flex;
   -webkit-box-orient: vertical;
   -webkit-box-direction: normal;
-      -ms-flex-direction: column;
-          flex-direction: column;
+  -ms-flex-direction: column;
+  flex-direction: column;
   -webkit-box-flex: 1;
-      -ms-flex: 1 0 0px;
-          flex: 1 0 0;
+  -ms-flex: 1 0 0px;
+  flex: 1 0 0;
   width: 100%;
   -moz-user-select: none;
-   -ms-user-select: none;
-       user-select: none;
+  -ms-user-select: none;
+  user-select: none;
   -webkit-user-select: none;
   height: 100%;
 }
@@ -670,8 +711,8 @@ button.rbc-input::-moz-focus-inner {
   display: flex;
   -webkit-box-orient: horizontal;
   -webkit-box-direction: normal;
-      -ms-flex-direction: row;
-          flex-direction: row;
+  -ms-flex-direction: row;
+  flex-direction: row;
 }
 
 .rbc-month-row {
@@ -681,13 +722,13 @@ button.rbc-input::-moz-focus-inner {
   position: relative;
   -webkit-box-orient: vertical;
   -webkit-box-direction: normal;
-      -ms-flex-direction: column;
-          flex-direction: column;
+  -ms-flex-direction: column;
+  flex-direction: column;
   -webkit-box-flex: 1;
-      -ms-flex: 1 0 0px;
-          flex: 1 0 0;
+  -ms-flex: 1 0 0px;
+  flex: 1 0 0;
   -ms-flex-preferred-size: 0px;
-      flex-basis: 0px;
+  flex-basis: 0px;
   overflow: hidden;
   height: 100%;
 }
@@ -697,8 +738,8 @@ button.rbc-input::-moz-focus-inner {
 
 .rbc-date-cell {
   -webkit-box-flex: 1;
-      -ms-flex: 1 1 0px;
-          flex: 1 1 0;
+  -ms-flex: 1 1 0px;
+  flex: 1 1 0;
   min-width: 0;
   padding-right: 5px;
   text-align: right;
@@ -717,19 +758,19 @@ button.rbc-input::-moz-focus-inner {
   display: flex;
   -webkit-box-orient: horizontal;
   -webkit-box-direction: normal;
-      -ms-flex-direction: row;
-          flex-direction: row;
+  -ms-flex-direction: row;
+  flex-direction: row;
   -webkit-box-flex: 1;
-      -ms-flex: 1 0 0px;
-          flex: 1 0 0;
+  -ms-flex: 1 0 0px;
+  flex: 1 0 0;
   overflow: hidden;
   right: 1px;
 }
 
 .rbc-day-bg {
   -webkit-box-flex: 1;
-      -ms-flex: 1 0 0%;
-          flex: 1 0 0%;
+  -ms-flex: 1 0 0%;
+  flex: 1 0 0%;
 }
 .rbc-day-bg + .rbc-day-bg {
   border-left: 1px solid #ddd;
@@ -745,7 +786,7 @@ button.rbc-input::-moz-focus-inner {
   border: 1px solid #e5e5e5;
   background-color: #fff;
   -webkit-box-shadow: 0 5px 15px rgba(0, 0, 0, 0.25);
-          box-shadow: 0 5px 15px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.25);
   padding: 10px;
 }
 .rbc-overlay > * + * {
@@ -764,11 +805,11 @@ button.rbc-input::-moz-focus-inner {
   display: flex;
   -webkit-box-orient: vertical;
   -webkit-box-direction: normal;
-      -ms-flex-direction: column;
-          flex-direction: column;
+  -ms-flex-direction: column;
+  flex-direction: column;
   -webkit-box-flex: 1;
-      -ms-flex: 1 0 0px;
-          flex: 1 0 0;
+  -ms-flex: 1 0 0px;
+  flex: 1 0 0;
   overflow: auto;
 }
 .rbc-agenda-view table.rbc-agenda-table {
@@ -830,14 +871,14 @@ button.rbc-input::-moz-focus-inner {
   display: flex;
   -webkit-box-orient: vertical;
   -webkit-box-direction: normal;
-      -ms-flex-direction: column;
-          flex-direction: column;
+  -ms-flex-direction: column;
+  flex-direction: column;
   min-height: 100%;
 }
 .rbc-time-column .rbc-timeslot-group {
   -webkit-box-flex: 1;
-      -ms-flex: 1;
-          flex: 1;
+  -ms-flex: 1;
+  flex: 1;
 }
 
 .rbc-timeslot-group {
@@ -848,15 +889,15 @@ button.rbc-input::-moz-focus-inner {
   display: flex;
   -webkit-box-orient: vertical;
   -webkit-box-direction: normal;
-      -ms-flex-flow: column nowrap;
-          flex-flow: column nowrap;
+  -ms-flex-flow: column nowrap;
+  flex-flow: column nowrap;
 }
 
 .rbc-time-gutter,
 .rbc-header-gutter {
   -webkit-box-flex: 0;
-      -ms-flex: none;
-          flex: none;
+  -ms-flex: none;
+  flex: none;
 }
 
 .rbc-label {
@@ -887,11 +928,11 @@ button.rbc-input::-moz-focus-inner {
   min-height: 20px;
   -webkit-box-orient: vertical;
   -webkit-box-direction: normal;
-      -ms-flex-flow: column wrap;
-          flex-flow: column wrap;
+  -ms-flex-flow: column wrap;
+  flex-flow: column wrap;
   -webkit-box-align: start;
-      -ms-flex-align: start;
-          align-items: flex-start;
+  -ms-flex-align: start;
+  align-items: flex-start;
   overflow: hidden;
   position: absolute;
 }
@@ -900,16 +941,16 @@ button.rbc-input::-moz-focus-inner {
 }
 .rbc-day-slot .rbc-event-label {
   -webkit-box-flex: 0;
-      -ms-flex: none;
-          flex: none;
+  -ms-flex: none;
+  flex: none;
   padding-right: 5px;
   width: auto;
 }
 .rbc-day-slot .rbc-event-content {
   width: 100%;
   -webkit-box-flex: 1;
-      -ms-flex: 1 1 0px;
-          flex: 1 1 0;
+  -ms-flex: 1 1 0px;
+  flex: 1 1 0;
   word-wrap: break-word;
   line-height: 1;
   height: 100%;
@@ -934,10 +975,10 @@ button.rbc-input::-moz-focus-inner {
 .rbc-time-view-resources .rbc-time-header-content {
   min-width: auto;
   -webkit-box-flex: 1;
-      -ms-flex: 1 0 0px;
-          flex: 1 0 0;
+  -ms-flex: 1 0 0px;
+  flex: 1 0 0;
   -ms-flex-preferred-size: 0px;
-      flex-basis: 0px;
+  flex-basis: 0px;
 }
 .rbc-time-view-resources .rbc-time-header-cell-single-day {
   display: none;
@@ -949,10 +990,10 @@ button.rbc-input::-moz-focus-inner {
 .rbc-time-view-resources .rbc-day-bg {
   width: 140px;
   -webkit-box-flex: 1;
-      -ms-flex: 1 1 0px;
-          flex: 1 1 0;
+  -ms-flex: 1 1 0px;
+  flex: 1 1 0;
   -ms-flex-preferred-size: 0 px;
-      flex-basis: 0 px;
+  flex-basis: 0 px;
 }
 
 .rbc-time-header-content + .rbc-time-header-content {
@@ -961,8 +1002,8 @@ button.rbc-input::-moz-focus-inner {
 
 .rbc-time-slot {
   -webkit-box-flex: 1;
-      -ms-flex: 1 0 0px;
-          flex: 1 0 0;
+  -ms-flex: 1 0 0px;
+  flex: 1 0 0;
 }
 .rbc-time-slot.rbc-now {
   font-weight: bold;
@@ -992,11 +1033,11 @@ button.rbc-input::-moz-focus-inner {
   display: flex;
   -webkit-box-orient: vertical;
   -webkit-box-direction: normal;
-      -ms-flex-direction: column;
-          flex-direction: column;
+  -ms-flex-direction: column;
+  flex-direction: column;
   -webkit-box-flex: 1;
-      -ms-flex: 1;
-          flex: 1;
+  -ms-flex: 1;
+  flex: 1;
   width: 100%;
   border: 1px solid #ddd;
   min-height: 0;
@@ -1007,7 +1048,7 @@ button.rbc-input::-moz-focus-inner {
 }
 .rbc-time-view .rbc-allday-cell {
   -webkit-box-sizing: content-box;
-          box-sizing: content-box;
+  box-sizing: content-box;
   width: 100%;
   height: 100%;
   position: relative;
@@ -1021,7 +1062,7 @@ button.rbc-input::-moz-focus-inner {
 }
 .rbc-time-view .rbc-row {
   -webkit-box-sizing: border-box;
-          box-sizing: border-box;
+  box-sizing: border-box;
   min-height: 20px;
 }
 
@@ -1030,12 +1071,12 @@ button.rbc-input::-moz-focus-inner {
   display: -ms-flexbox;
   display: flex;
   -webkit-box-flex: 0;
-      -ms-flex: 0 0 auto;
-          flex: 0 0 auto;
+  -ms-flex: 0 0 auto;
+  flex: 0 0 auto;
   -webkit-box-orient: horizontal;
   -webkit-box-direction: normal;
-      -ms-flex-direction: row;
-          flex-direction: row;
+  -ms-flex-direction: row;
+  flex-direction: row;
 }
 .rbc-time-header.rbc-overflowing {
   border-right: 1px solid #ddd;
@@ -1057,16 +1098,16 @@ button.rbc-input::-moz-focus-inner {
 
 .rbc-time-header-content {
   -webkit-box-flex: 1;
-      -ms-flex: 1;
-          flex: 1;
+  -ms-flex: 1;
+  flex: 1;
   display: -webkit-box;
   display: -ms-flexbox;
   display: flex;
   min-width: 0;
   -webkit-box-orient: vertical;
   -webkit-box-direction: normal;
-      -ms-flex-direction: column;
-          flex-direction: column;
+  -ms-flex-direction: column;
+  flex-direction: column;
   border-left: 1px solid #ddd;
 }
 .rbc-rtl .rbc-time-header-content {
@@ -1076,7 +1117,7 @@ button.rbc-input::-moz-focus-inner {
 .rbc-time-header-content > .rbc-row.rbc-row-resource {
   border-bottom: 1px solid #ddd;
   -ms-flex-negative: 0;
-      flex-shrink: 0;
+  flex-shrink: 0;
 }
 
 .rbc-time-content {
@@ -1084,11 +1125,11 @@ button.rbc-input::-moz-focus-inner {
   display: -ms-flexbox;
   display: flex;
   -webkit-box-flex: 1;
-      -ms-flex: 1 0 0%;
-          flex: 1 0 0%;
+  -ms-flex: 1 0 0%;
+  flex: 1 0 0%;
   -webkit-box-align: start;
-      -ms-flex-align: start;
-          align-items: flex-start;
+  -ms-flex-align: start;
+  align-items: flex-start;
   width: 100%;
   border-top: 2px solid #ddd;
   overflow-y: auto;
@@ -1096,8 +1137,8 @@ button.rbc-input::-moz-focus-inner {
 }
 .rbc-time-content > .rbc-time-gutter {
   -webkit-box-flex: 0;
-      -ms-flex: none;
-          flex: none;
+  -ms-flex: none;
+  flex: none;
 }
 .rbc-time-content > * + * > * {
   border-left: 1px solid #ddd;
@@ -1109,8 +1150,8 @@ button.rbc-input::-moz-focus-inner {
 .rbc-time-content > .rbc-day-slot {
   width: 100%;
   -moz-user-select: none;
-   -ms-user-select: none;
-       user-select: none;
+  -ms-user-select: none;
+  user-select: none;
   -webkit-user-select: none;
 }
 
@@ -1130,8 +1171,8 @@ button.rbc-input::-moz-focus-inner {
   display: flex;
   -webkit-box-orient: vertical;
   -webkit-box-direction: normal;
-      -ms-flex-direction: column;
-          flex-direction: column;
+  -ms-flex-direction: column;
+  flex-direction: column;
 }
 .rbc-resource-grouping .rbc-row .rbc-header {
   width: 141px;
@@ -1140,6 +1181,7 @@ button.rbc-input::-moz-focus-inner {
 /*# sourceMappingURL=react-big-calendar.css.map */
 
 /*OVERIDES*/
+
 /*Big-Calendar*/
 
 .rbc-btn-group {
@@ -1158,12 +1200,10 @@ button.rbc-input::-moz-focus-inner {
   font-size:12px !important;
   font-weight:semi-bold !important;
   color:black !important;
-
 }
 
 .rbc-time-header {
-height:50px !important;
-
+  height:50px !important;
 }
 
 .rbc-time-view {
@@ -1171,14 +1211,11 @@ height:50px !important;
   border-color:#eee !important;
 }
 
-
-
 .rbc-toolbar button:hover {
   background-color:oklch(62.7% 0.265 303.9) !important;
   box-shadow:none !important;
   text:#000 !important;
 }
-
 
 .rbc-time-gutter.rbc-time-column {
   font-size:14px !important;
@@ -1186,42 +1223,36 @@ height:50px !important;
 }
 
 .rbc-timeslot-group {
-background-color:oklch(62.7% 0.265 303.9/0.20) !important;
+  background-color:oklch(62.7% 0.265 303.9/0.20) !important;
 }
 
 .rbc-time-gutter.rbc-time-column {
   font-size:14px !important;
   font-weight:bold !important;
   background-color:oklch(1 0.0094 303.9) !important;
-
 }
 
 .rbc-event:nth-child(1) {
-background-color:oklch(62.7% 0.265 303.9) !important;
+  background-color:oklch(62.7% 0.265 303.9) !important;
 }
 
 .rbc-event:nth-child(2) {
-background-color:oklch(79.5% 0.184 86.047) !important;
+  background-color:oklch(79.5% 0.184 86.047) !important;
 }
 
 .rbc-event:nth-child(3) {
-background-color:oklch(0.5103 0.1599 36.57) !important;
+  background-color:oklch(0.5103 0.1599 36.57) !important;
 }
 
 .rbc-event:nth-child(4) {
-background-color:oklch(0.6485 0.2758 24.92) !important;
+  background-color:oklch(0.6485 0.2758 24.92) !important;
 }
 
 .rbc-event:nth-child(5) {
-background-color:oklch(0.4162 0.2709 0) !important;
+  background-color:oklch(0.4162 0.2709 0) !important;
 }
-
 
 .rbc-even-label {
   font-size:8px !important;
   font-weight:semibold !important;
-
 }
-
-
-
