@@ -155,7 +155,7 @@ const VendasSwitches: React.FC<VendasSwitchesProps> = ({
                 <Button
                   variant={"outline"}
                   className={cn(
-                    "w-full justify-start text-left font-normal border-gray-200 text-black h-10",
+                    "w-full justify-start text-left font-normal border-gray-200 text-black h-10 hover:text-gray-700",
                     !selectedDate && "text-muted-foreground"
                   )}
                 >
@@ -163,7 +163,7 @@ const VendasSwitches: React.FC<VendasSwitchesProps> = ({
                   {selectedDate ? format(selectedDate, "PPP HH:mm", { locale: ptBR }) : <span>Selecione a data</span>}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
+              <PopoverContent className="w-auto p-0 bg-gray-500" align="start">
                 <Calendar
                   mode="single"
                   selected={selectedDate}
@@ -180,7 +180,7 @@ const VendasSwitches: React.FC<VendasSwitchesProps> = ({
                 <div className="p-3 border-t border-border">
                   <input 
                     type="time" 
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex h-10 w-full rounded-md border border-input bg-gray-500 px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                     value={selectedDate ? format(selectedDate, "HH:mm") : ""}
                     onChange={(e) => {
                       if (onDateChange) {
