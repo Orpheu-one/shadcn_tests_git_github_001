@@ -2,27 +2,32 @@
 
 import { useState } from "react"; // ✅ ADICIONADO: Para criar o state
 import BigCalendar from "@/components/BigCalendar"
-import EventCalendar from "@/components/EventCalendar"
 import ListaVendas from "@/components/ListaVendas"
+import CustomCalendar from "@/components/CustomCalendar";
 
 const OperadorPage = () => {
   // ✅ ADICIONADO: State que conecta os dois calendários
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
   return (
-    <div className='w-full flex px-4 gap-4 flex-col md:flex-row lg:flex-row'>
+    <div className='w-full h-screen flex px-4 gap-4 flex-col md:flex-row lg:flex-row'>
       
       {/*left side*/}
       <div className="w-full flex lg:w-2/3 dark:bg-white rounded-lg p-4 text-black">
         {/* ✅ MODIFICADO: Passa a data selecionada para o BigCalendar */}
-        <BigCalendar selectedDate={selectedDate} />
+        <BigCalendar selectedDate={selectedDate}/>
       </div>
 
       {/*right side*/}
-      <div className="w-full flex gap-4 lg:w-1/3 dark:bg-gray-900 rounded-r-lg">
+      <div className="w-full flex-wrap gap-4 lg:w-1/3 dark:bg-transparent rounded-r-lg">
         <h2 className="text-lg font-semibold">
           {/* ✅ MODIFICADO: Passa o handler para receber a data selecionada */}
-          <EventCalendar onDateSelect={setSelectedDate} />
+          <CustomCalendar 
+           showModeToggle={false}
+        showPresets={false}
+        showEvents={false}
+        defaultMode="single"
+          onDateSelect={setSelectedDate} />
           <div className="mt-4"></div>
           <ListaVendas />
         </h2>

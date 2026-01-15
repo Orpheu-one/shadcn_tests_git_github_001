@@ -20,6 +20,44 @@ interface ChartDataItem {
   total: number;
 }
 
+// 🎯 Detecta granularidade do range (hora, dia ou mês)
+type Granularidade = 'hora' | 'dia' | 'mes';
+
+const detectarGranularidade = (start: Date, end: Date): Granularidade => {
+  const isDiaUnico = start.getTime() === end.getTime();
+  if (isDiaUnico) return 'hora';
+  
+  const diasDiferenca = Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+  
+  // Se > 31 dias, agrupa por mês
+  if (diasDiferenca > 31) return 'mes';
+  
+  return 'dia';
+};
+
+// 🗓️ Agrupa vendas por mês
+const agruparPorMes = (vendas: VendaDia[]): ChartDataItem[] => {
+  const vendasPorMes = new Map<string, { elite: number; winner: number }>();
+  
+  vendas.forEach(venda => {
+    const date = new Date(venda.data);
+    const mesAno = date.toLocaleDateString('pt-PT', { month: 'short', year: 'numeric' });
+    
+    const atual = vendasPorMes.get(mesAno) || { elite: 0, winner: 0 };
+    vendasPorMes.set(mesAno, {
+      elite: atual.elite + venda.elite,
+      winner: atual.winner + venda.winner
+    });
+  });
+  
+  return Array.from(vendasPorMes.entries()).map(([mesAno, totais]) => ({
+    name: mesAno,
+    elite: totais.elite,
+    winner: totais.winner,
+    total: totais.elite + totais.winner
+  }));
+};
+
 const TotalVendas = () => {
   const { startDate, endDate, dateRange } = useDateRange()
 
@@ -29,56 +67,56 @@ const TotalVendas = () => {
       temRange: !!dateRange,
       startDate: startDate?.toLocaleDateString('pt-PT'),
       endDate: endDate?.toLocaleDateString('pt-PT'),
-      modoDetectado: startDate && endDate && startDate.getTime() === endDate.getTime() 
-        ? 'DIA ÚNICO' 
-        : startDate && endDate 
-          ? 'RANGE' 
-          : 'SEM SELEÇÃO'
+      granularidade: startDate && endDate ? detectarGranularidade(startDate, endDate) : 'N/A'
     })
   }, [startDate, endDate, dateRange])
 
   // 🎯 Processamento inteligente dos dados
-  const chartData = useMemo<ChartDataItem[]>(() => {
+  const { chartData, granularidade } = useMemo<{ chartData: ChartDataItem[], granularidade: Granularidade }>(() => {
     console.log('🔄 [TOTAL_VENDAS] Recalculando dados do chart...')
 
     // CASO 1: Nenhuma data selecionada - Mostrar última semana
     if (!startDate || !endDate) {
       console.log('⚠️ [TOTAL_VENDAS] Sem datas selecionadas - Mostrando última semana')
       
-      const hoje = new Date(2026, 0, 12) // 12 Janeiro 2026 (data atual)
+      const hoje = new Date(2026, 0, 12) // 12 Janeiro 2026
       const seteDiasAtras = new Date(hoje)
       seteDiasAtras.setDate(hoje.getDate() - 6)
       
       try {
         const vendas = getVendasPorRange(seteDiasAtras, hoje)
         
-        return vendas.map(venda => {
-          const date = new Date(venda.data)
-          const diaSemana = date.toLocaleDateString('pt-PT', { weekday: 'short' })
-          
-          return {
-            name: diaSemana,
-            elite: venda.elite,
-            winner: venda.winner,
-            total: venda.elite + venda.winner
-          }
-        })
+        return {
+          chartData: vendas.map(venda => {
+            const date = new Date(venda.data)
+            const diaSemana = date.toLocaleDateString('pt-PT', { weekday: 'short' })
+            
+            return {
+              name: diaSemana,
+              elite: venda.elite,
+              winner: venda.winner,
+              total: venda.elite + venda.winner
+            }
+          }),
+          granularidade: 'dia'
+        }
       } catch (error) {
         console.error('❌ [TOTAL_VENDAS] Erro ao carregar última semana:', error)
-        return []
+        return { chartData: [], granularidade: 'dia' }
       }
     }
 
-    // CASO 2: Dia único (startDate === endDate)
-    const isDiaUnico = startDate.getTime() === endDate.getTime()
-    
-    if (isDiaUnico) {
+    // Detecta granularidade
+    const gran = detectarGranularidade(startDate, endDate);
+    console.log('🎯 [TOTAL_VENDAS] Granularidade detectada:', gran);
+
+    // CASO 2: Dia único (vendas por hora)
+    if (gran === 'hora') {
       console.log('📅 [TOTAL_VENDAS] MODO: Dia único -', startDate.toLocaleDateString('pt-PT'))
       
-      // Validação: Apenas Janeiro 2026
       if (!isDataValida(startDate)) {
         console.warn('⚠️ [TOTAL_VENDAS] Data fora do intervalo (Janeiro 2026)')
-        return []
+        return { chartData: [], granularidade: 'hora' }
       }
       
       try {
@@ -86,49 +124,85 @@ const TotalVendas = () => {
         
         console.log('✅ [TOTAL_VENDAS] Dados por hora carregados:', vendasHora.length)
         
-        return vendasHora.map(venda => ({
-          name: venda.hora,
-          elite: venda.elite,
-          winner: venda.winner,
-          total: venda.elite + venda.winner
-        }))
+        return {
+          chartData: vendasHora.map(venda => ({
+            name: venda.hora,
+            elite: venda.elite,
+            winner: venda.winner,
+            total: venda.elite + venda.winner
+          })),
+          granularidade: 'hora'
+        }
       } catch (error) {
         console.error('❌ [TOTAL_VENDAS] Erro ao gerar vendas por hora:', error)
-        return []
+        return { chartData: [], granularidade: 'hora' }
       }
     }
 
-    // CASO 3: Range de datas
-    console.log('📊 [TOTAL_VENDAS] MODO: Range de datas')
-    
-    try {
-      const vendasRange = getVendasPorRange(startDate, endDate)
+    // CASO 3: Range de dias
+    if (gran === 'dia') {
+      console.log('📊 [TOTAL_VENDAS] MODO: Range de dias')
       
-      if (vendasRange.length === 0) {
-        console.warn('⚠️ [TOTAL_VENDAS] Nenhuma venda encontrada no range')
-        return []
-      }
-      
-      console.log('✅ [TOTAL_VENDAS] Vendas no range:', vendasRange.length)
-      
-      return vendasRange.map(venda => {
-        const date = new Date(venda.data)
-        const diaFormatado = date.toLocaleDateString('pt-PT', { 
-          day: '2-digit', 
-          month: 'short' 
-        })
+      try {
+        const vendasRange = getVendasPorRange(startDate, endDate)
+        
+        if (vendasRange.length === 0) {
+          console.warn('⚠️ [TOTAL_VENDAS] Nenhuma venda encontrada no range')
+          return { chartData: [], granularidade: 'dia' }
+        }
+        
+        console.log('✅ [TOTAL_VENDAS] Vendas no range:', vendasRange.length)
         
         return {
-          name: diaFormatado,
-          elite: venda.elite,
-          winner: venda.winner,
-          total: venda.elite + venda.winner
+          chartData: vendasRange.map(venda => {
+            const date = new Date(venda.data)
+            const diaFormatado = date.toLocaleDateString('pt-PT', { 
+              day: '2-digit', 
+              month: 'short' 
+            })
+            
+            return {
+              name: diaFormatado,
+              elite: venda.elite,
+              winner: venda.winner,
+              total: venda.elite + venda.winner
+            }
+          }),
+          granularidade: 'dia'
         }
-      })
-    } catch (error) {
-      console.error('❌ [TOTAL_VENDAS] Erro ao carregar vendas do range:', error)
-      return []
+      } catch (error) {
+        console.error('❌ [TOTAL_VENDAS] Erro ao carregar vendas do range:', error)
+        return { chartData: [], granularidade: 'dia' }
+      }
     }
+
+    // CASO 4: Range de meses (> 31 dias)
+    if (gran === 'mes') {
+      console.log('📆 [TOTAL_VENDAS] MODO: Range de meses (trimestre/ano)')
+      
+      try {
+        const vendasRange = getVendasPorRange(startDate, endDate)
+        
+        if (vendasRange.length === 0) {
+          console.warn('⚠️ [TOTAL_VENDAS] Nenhuma venda encontrada no range')
+          return { chartData: [], granularidade: 'mes' }
+        }
+        
+        const vendasAgrupadas = agruparPorMes(vendasRange);
+        
+        console.log('✅ [TOTAL_VENDAS] Vendas agrupadas por mês:', vendasAgrupadas.length)
+        
+        return {
+          chartData: vendasAgrupadas,
+          granularidade: 'mes'
+        }
+      } catch (error) {
+        console.error('❌ [TOTAL_VENDAS] Erro ao carregar vendas do range:', error)
+        return { chartData: [], granularidade: 'mes' }
+      }
+    }
+
+    return { chartData: [], granularidade: 'dia' }
   }, [startDate, endDate])
 
   // 📊 Cálculo dinâmico do Y-axis máximo (+20% da maior venda total)
@@ -155,6 +229,12 @@ const TotalVendas = () => {
     
     if (isDiaUnico) {
       return `Vendas por Hora - ${startDate.toLocaleDateString('pt-PT')}`
+    }
+    
+    const diasDif = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
+    
+    if (diasDif > 31) {
+      return `Vendas por Mês - ${startDate.toLocaleDateString('pt-PT')} a ${endDate.toLocaleDateString('pt-PT')}`
     }
     
     return `Vendas por Dia - ${startDate.toLocaleDateString('pt-PT')} a ${endDate.toLocaleDateString('pt-PT')}`
