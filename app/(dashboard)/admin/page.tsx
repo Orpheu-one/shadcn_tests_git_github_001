@@ -1,22 +1,23 @@
 import ChartRadialVendas from "@/components/chartRadialVendas"
 import CustomCalendar from "@/components/CustomCalendar"
-import EventCalendar from "@/components/EventCalendar"
 import ListaVendas from "@/components/ListaVendas"
+import MetricCard from "@/components/MetricCard"
 import TotalVendas from "@/components/TotalVendas"
-import UserCard from "@/components/userCard"
-import VendasTeams from "@/components/VendasTeams"
+//import UserCard from "@/components/userCard"
+import VendasComposed from "@/components/VendasComposed"
+
 
 
 const adminPage = () => {
   return (
     <div className='w-full flex gap-4 flex-col md:flex-row lg:flex-row'>
-      {/*left side*/}
+      {/*left top side*/}
       <div className="w-full lg:w-2/3 flex flex-col gap-4 dark:bg-transparent rounded-lg">
         <div className="flex justify-content gap-4 flex-wrap">
-          <UserCard type="administrador"/>
-          <UserCard type="operador"/>
-          <UserCard type="supervisor"/>
-          <UserCard type="vendedor"/>
+          <MetricCard type="total"/>
+          <MetricCard type="media"/>
+          <MetricCard type="minimo"/>
+          <MetricCard type="percentagem"/>
         </div>
 
           {/*bottom chart*/}
@@ -38,7 +39,7 @@ const adminPage = () => {
         {/*chart 2*/}
 
           <div className="flex w-full lg:w-2/3 h-[400px] dark:bg-neutral-300 rounded-lg">
-            <VendasTeams/>
+            <VendasComposed />
 
           </div>
 
