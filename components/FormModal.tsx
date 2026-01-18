@@ -31,7 +31,7 @@ const forms: {
     id?: number, 
     userId?: string,
     onSuccess?: () => void,
-    data?: any  // ✅ ADICIONADO: Para passar dados do calendário
+    data?: any
   ) => JSX.Element 
 } = {
   operador: (type, tableLabel, formId, id, userId, onSuccess) => (
@@ -67,19 +67,47 @@ const FormModal = ({ table, type, data, id, userId, forcedOpen, onClose }: any) 
   const { user } = useUser();
 
   // =========================================================
-  // LÓGICA DE PERMISSÃO
+  // 🔧 FUNÇÃO DE NORMALIZAÇÃO DE ROLE (IGUAL AO SIDEBAR)
+  // =========================================================
+  const normalizeRole = (role: string | undefined): string | undefined => {
+    if (!role) return undefined;
+    
+    const normalized = role.toLowerCase();
+    
+    // Map variations to standard roles
+    const roleMap: Record<string, string> = {
+      'operador': 'operator',
+      'vendedor': 'd2d',
+      'super-admin': 'super_admin',
+      'super_admin': 'super_admin',
+    };
+    
+    return roleMap[normalized] || normalized;
+  };
+
+  // =========================================================
+  // ✅ LÓGICA DE PERMISSÃO (CORRIGIDA)
   // =========================================================
   const canCreate = () => {
     if (type !== "create") return true;
-    const userRole = (user?.publicMetadata?.role as string)?.toLowerCase();
+    
+    const rawRole = user?.publicMetadata?.role as string | undefined;
+    const userRole = normalizeRole(rawRole);
+    
+    // 🔍 Debug log (remove depois de confirmar que funciona)
+    console.log('🔐 [FormModal canCreate] Raw role:', rawRole, '| Normalized:', userRole, '| Table:', table);
 
-    // Permite Operadores e Vendedores criarem Vendas/Events/Callbacks
+    // ✅ EVENTOS (Vendas/Callbacks) - Todos podem criar
     if (table === "vendas" || table === "events" || table === "callbacks") {
-      return ["admin", "super-admin", "supervisor", "operador", "vendedor"].includes(userRole || "");
+      const canCreateEvent = ["admin", "super_admin", "supervisor", "operator", "d2d"].includes(userRole || "");
+      console.log('📝 [FormModal] Can create event?', canCreateEvent);
+      return canCreateEvent;
     }
 
-    // Para criar USERS (Operadores, Admins), mantém restrito
-    return ["admin", "super-admin", "supervisor"].includes(userRole || "");
+    // ✅ USERS (Operadores, Admins, Supervisores) - Só Admin/Supervisor
+    const canCreateUser = ["admin", "super_admin", "supervisor"].includes(userRole || "");
+    console.log('👤 [FormModal] Can create user?', canCreateUser);
+    return canCreateUser;
   };
 
   // =========================================================
@@ -90,8 +118,11 @@ const FormModal = ({ table, type, data, id, userId, forcedOpen, onClose }: any) 
       if (canCreate()) {
         setOpen(true);
       } else {
+        const rawRole = user?.publicMetadata?.role as string | undefined;
+        const normalizedRole = normalizeRole(rawRole);
+        console.error('❌ [FormModal] Permissão negada. Role:', rawRole, '→', normalizedRole);
         toast.error("Sem permissão para realizar esta acção.");
-        if (onClose) onClose(); // ✅ Fecha se não tiver permissão
+        if (onClose) onClose();
       }
     }
   }, [forcedOpen]);
@@ -161,7 +192,7 @@ const FormModal = ({ table, type, data, id, userId, forcedOpen, onClose }: any) 
 
   const handleCloseModal = () => {
     setOpen(false);
-    if (onClose) onClose(); // ✅ Callback para BigCalendar
+    if (onClose) onClose();
   };
 
   const handleFormSuccess = () => {
@@ -218,10 +249,7 @@ const FormModal = ({ table, type, data, id, userId, forcedOpen, onClose }: any) 
 
     return SelectedForm ? (
       <>
-        {/* ✅ Passa 'data' para o form pré-preencher campos */}
         {SelectedForm(type, tableLabel, formId, id as number, userId, handleFormSuccess, data)}
-        
-        {/* Botões de Acção do Rodapé */}
         <div className="flex gap-3 mt-4">
           <button 
             type="button"
@@ -248,7 +276,6 @@ const FormModal = ({ table, type, data, id, userId, forcedOpen, onClose }: any) 
 
   return (
     <>
-      {/* Botão de Trigger (Só renderiza se não for abertura forçada) */}
       {!forcedOpen && (
         <button 
           className={`${size} flex items-center justify-center rounded-full ${bgColor} hover:opacity-90 transition`} 
@@ -266,7 +293,6 @@ const FormModal = ({ table, type, data, id, userId, forcedOpen, onClose }: any) 
         </div>
       )}
 
-      {/* ✅ Quando forcedOpen=true (BigCalendar), só renderiza o Form */}
       {forcedOpen && <Form />}
     </>
   );

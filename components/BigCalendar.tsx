@@ -3,36 +3,44 @@
 import { Calendar, dayjsLocalizer, View } from 'react-big-calendar'
 import dayjs from 'dayjs'
 import { useState } from 'react'
-import { calendarEvents } from '@/lib/data'
 import FormModal from '@/components/FormModal'
+import { Button } from "@/components/ui/button"
 
 const localizer = dayjsLocalizer(dayjs)
 
-interface BigCalendarProps {
-  selectedDate?: Date; // ✅ Recebe a data do EventCalendar
+interface CalendarEvent {
+  id: number;
+  title: string;
+  start: Date;
+  end: Date;
+  type: 'SALE' | 'CALLBACK';
+  status: string;
+  clientName: string;
+  operatorId: string;
+  createdAt: Date;
+  obs?: string | null;
 }
 
-const BigCalendar = ({ selectedDate }: BigCalendarProps) => {
+interface BigCalendarProps {
+  selectedDate?: Date;
+  initialEvents?: CalendarEvent[]; // ✅ Opcional para quando não vem da BD
+}
+
+const BigCalendar = ({ selectedDate, initialEvents = [] }: BigCalendarProps) => {
   const [view, setView] = useState<View>('week');
-  const [currentDate, setCurrentDate] = useState<Date>(new Date());
+  const [currentDate, setCurrentDate] = useState<Date>(selectedDate || new Date());
   const [openModal, setOpenModal] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [selectedSlot, setSelectedSlot] = useState<{ start: Date; end: Date } | null>(null);
+  const [events, setEvents] = useState<CalendarEvent[]>(initialEvents);
 
-  // ✅ Quando recebe uma nova data do EventCalendar
+  // ✅ FIX: Atualiza currentDate quando selectedDate muda
   useState(() => {
     if (selectedDate) {
-      console.log('🔄 BigCalendar mudando para data:', selectedDate);
       setCurrentDate(selectedDate);
-      setView('day'); // ✅ Muda para vista diária
+      setView('day');
     }
   });
-
-  // ✅ Atualiza quando selectedDate muda
-  if (selectedDate && selectedDate.getTime() !== currentDate.getTime()) {
-    setCurrentDate(selectedDate);
-    setView('day');
-  }
 
   const handleViewChange = (newView: View) => {
     setView(newView);
@@ -42,7 +50,6 @@ const BigCalendar = ({ selectedDate }: BigCalendarProps) => {
     setCurrentDate(newDate);
   }
 
-  // 🎯 Quando clica num evento existente
   const handleSelectEvent = (event: any) => {
     console.log('📅 Evento clicado:', event);
     setSelectedEvent(event);
@@ -50,7 +57,6 @@ const BigCalendar = ({ selectedDate }: BigCalendarProps) => {
     setOpenModal(true);
   }
 
-  // 🎯 Quando clica num slot vazio (criar novo)
   const handleSelectSlot = (slotInfo: any) => {
     console.log('🆕 Slot vazio clicado:', slotInfo);
     setSelectedEvent(null);
@@ -61,41 +67,117 @@ const BigCalendar = ({ selectedDate }: BigCalendarProps) => {
     setOpenModal(true);
   }
 
-  // 🎯 Fecha o modal
   const handleCloseModal = () => {
     setOpenModal(false);
     setSelectedEvent(null);
     setSelectedSlot(null);
+    
+    // ✅ Recarrega a página para buscar novos eventos
+    window.location.reload();
+  }
+
+  const toggleView = () => {
+    setView(prev => prev === 'week' ? 'day' : 'week')
+  }
+
+  const eventStyleGetter = (event: CalendarEvent) => {
+    const backgroundColor = event.type === 'SALE' 
+      ? '#facc15' // yellow-400
+      : '#d8b4fe'; // purple-300
+
+    return {
+      style: {
+        backgroundColor,
+        borderRadius: '6px',
+        opacity: 0.9,
+        color: '#000',
+        border: 'none',
+        display: 'block',
+        fontSize: '11px',
+        padding: '4px 6px',
+      }
+    };
+  };
+
+  const CustomEvent = ({ event }: { event: CalendarEvent }) => {
+    return (
+      <div className="flex flex-col h-full">
+        <div className="font-bold text-[10px] truncate">
+          {event.title}
+        </div>
+        <div className="text-[9px] opacity-80 truncate">
+          {event.clientName}
+        </div>
+        <div className="text-[8px] opacity-60">
+          {dayjs(event.createdAt).format('DD/MM HH:mm')}
+        </div>
+      </div>
+    );
+  };
+
+  const CustomToolbar = (toolbar: any) => {
+    return (
+      <div className="flex items-center justify-between mb-4 px-2">
+        <div className="w-[180px]"></div>
+        <div className="flex-1 text-center">
+          <span className="text-lg font-bold text-gray-700">
+            {toolbar.label}
+          </span>
+        </div>
+        <div className="w-[180px] flex justify-end">
+          <div className="flex items-center gap-2 p-1 bg-gray-400/40 rounded-lg">
+            <Button
+              onClick={toggleView}
+              variant="ghost"
+              className={`px-4 py-2 font-bold text-xs uppercase transition-all hover:text-black ${
+                view === 'day' ? 'bg-white text-black shadow-sm' : 'text-slate-700 hover:bg-gray-200'
+              }`}
+            >
+              Dia
+            </Button>
+            <Button
+              onClick={toggleView}
+              variant="ghost"
+              className={`px-4 py-2 font-bold text-xs uppercase transition-all hover:text-black ${
+                view === 'week' ? 'bg-white text-black shadow-sm' : 'text-slate-700 hover:bg-gray-200'
+              }`}
+            >
+              Semana
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
     <>
       <Calendar
         localizer={localizer}
-        events={calendarEvents}
+        events={events}
         startAccessor="start"
         endAccessor="end"
         style={{ height: "100%", width: "100%" }}
         view={view}
-        date={currentDate} // ✅ Controla a data exibida
+        date={currentDate}
         onView={handleViewChange}
-        onNavigate={handleNavigate} // ✅ Atualiza quando user navega
+        onNavigate={handleNavigate}
         views={{ month: false, week: true, day: true, agenda: false }}
-        min={new Date(0, 0, 0, 10, 0, 0)} // 10:00
-        max={new Date(0, 0, 0, 20, 0, 0)} // 20:00
-        
-        // ✅ HANDLERS para abrir FormModal
-        onSelectEvent={handleSelectEvent}  // Clique em evento existente
-        onSelectSlot={handleSelectSlot}    // Clique em slot vazio
-        selectable={true}                  // Permite selecionar slots
+        min={new Date(0, 0, 0, 10, 0, 0)}
+        max={new Date(0, 0, 0, 20, 0, 0)}
+        onSelectEvent={handleSelectEvent}
+        onSelectSlot={handleSelectSlot}
+        selectable={true}
+        components={{
+          toolbar: CustomToolbar,
+          event: CustomEvent,
+        }}
+        eventPropGetter={eventStyleGetter}
       />
 
-      {/* ✅ MODAL que abre quando clica no calendário */}
       {openModal && (
         <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center">
           <div className="bg-white p-8 rounded-lg relative w-[90%] md:w-[70%] lg:w-[60%] xl:w-[50%] max-h-[90vh] overflow-y-auto">
-            
-            {/* ✅ Cabeçalho do Modal */}
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold text-gray-800">
                 {selectedEvent ? 'Detalhes da Venda' : 'Nova Venda'}
@@ -108,7 +190,6 @@ const BigCalendar = ({ selectedDate }: BigCalendarProps) => {
               </button>
             </div>
 
-            {/* ✅ FORM MODAL */}
             <FormModal 
               table="vendas" 
               type={selectedEvent ? "edit" : "create"}

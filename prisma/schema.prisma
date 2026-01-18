@@ -34,7 +34,7 @@ enum EventStatus {
 model User {
   id         Int      @id @default(autoincrement())
   userId     String   @unique // Este é o ID do Clerk
-  internalId String   @unique @db.VarChar(4) // O teu ID de 4 letras (ex: JOSE)
+  internalId String   @unique @db.VarChar(4) //  ID de 4 letras (ex: JOSE)
   email      String   @unique
   frst_name  String
   lst_name   String

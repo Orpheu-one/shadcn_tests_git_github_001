@@ -1,7 +1,6 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 
-// Define as rotas que requerem autenticação (Dashboard e Listas)
 const isDashboardRoute = createRouteMatcher([
   '/admin(.*)',
   '/supervisor(.*)',
@@ -10,14 +9,12 @@ const isDashboardRoute = createRouteMatcher([
   '/lists(.*)',
 ])
 
-// Define as rotas sensíveis (Apenas Admin/Super-Admin)
 const isAdminOnlyRoute = createRouteMatcher([
-  '/lists/administradores(.*)', // ✅ ADICIONADO
+  '/lists/administradores(.*)',
   '/lists/supervisores(.*)',
   '/lists/dinamicas(.*)',
 ])
 
-// Rotas que Vendedor NÃO pode acessar
 const isNotForVendedor = createRouteMatcher([
   '/lists/callbacks(.*)',
   '/lists/operadores(.*)',
@@ -30,7 +27,6 @@ export default clerkMiddleware(async (auth, req) => {
   const { userId, sessionClaims } = await auth()
   const pathname = req.nextUrl.pathname
 
-  // 1. NÃO AUTENTICADO -> Redireciona para Login
   if (!userId) {
     if (isDashboardRoute(req)) {
       return NextResponse.redirect(new URL('/', req.url))
@@ -38,48 +34,87 @@ export default clerkMiddleware(async (auth, req) => {
     return NextResponse.next()
   }
 
-  // 2. AUTENTICADO
   if (sessionClaims) {
-    const role = (sessionClaims.metadata as any)?.userRole as string
+    // 🔍 DEBUG: Mostra TODOS os metadatas disponíveis
+    console.log('🔍 [DEBUG] sessionClaims completo:', JSON.stringify({
+      publicMetadata: sessionClaims.publicMetadata,
+      unsafeMetadata: sessionClaims.unsafeMetadata,
+      metadata: (sessionClaims as any).metadata,
+    }, null, 2))
 
-    // --- REGRA SUPREMA: ADMIN E SUPER-ADMIN ---
-    const isAdmin = role === 'admin' || role === 'super-admin';
+    // Tenta todas as localizações possíveis
+    let role = (sessionClaims.publicMetadata as any)?.role as string | undefined
+    
+    if (!role) {
+      role = (sessionClaims.unsafeMetadata as any)?.role as string | undefined
+      if (role) console.log('✅ [DEBUG] Role encontrado em unsafeMetadata:', role)
+    } else {
+      console.log('✅ [DEBUG] Role encontrado em publicMetadata:', role)
+    }
 
-    // 3. REDIRECT INICIAL (Apenas na raiz ou /redirect)
-    if (pathname === '/' || pathname === '/redirect') {
-      if (isAdmin) return NextResponse.redirect(new URL('/admin', req.url))
-      if (role === 'supervisor') return NextResponse.redirect(new URL('/supervisor', req.url))
-      if (role === 'operador') return NextResponse.redirect(new URL('/operador', req.url))
-      if (role === 'vendedor') return NextResponse.redirect(new URL('/vendedor', req.url))
+    if (!role) {
+      role = (sessionClaims as any)?.metadata?.userRole as string | undefined
+      if (role) console.log('✅ [DEBUG] Role encontrado em metadata.userRole:', role)
+    }
+
+    if (!role && isDashboardRoute(req)) {
+      console.error(`⛔ [Middleware] User ${userId} sem role em NENHUM metadata!`)
+      
+      if (pathname !== '/sem-acesso') {
+        return NextResponse.redirect(new URL('/sem-acesso', req.url))
+      }
+      
       return NextResponse.next()
     }
 
-    // ✅ ADMIN/SUPER-ADMIN: Acesso total, libera imediatamente
+    const normalizedRole = role?.toLowerCase()
+    const isAdmin = normalizedRole === 'admin' || normalizedRole === 'super_admin'
+
+    if (pathname === '/' || pathname === '/redirect') {
+      if (!normalizedRole) {
+        console.error(`⛔ [Middleware] Sem role no login`)
+        return NextResponse.redirect(new URL('/sem-acesso', req.url))
+      }
+
+      console.log(`🔀 [Middleware] Redirecting ${normalizedRole}`)
+      
+      if (isAdmin) return NextResponse.redirect(new URL('/admin', req.url))
+      if (normalizedRole === 'supervisor') return NextResponse.redirect(new URL('/supervisor', req.url))
+      if (normalizedRole === 'operator' || normalizedRole === 'operador') {
+        return NextResponse.redirect(new URL('/operador', req.url))
+      }
+      if (normalizedRole === 'd2d' || normalizedRole === 'vendedor') {
+        return NextResponse.redirect(new URL('/vendedor', req.url))
+      }
+
+      console.error(`⛔ [Middleware] Role não reconhecido: ${role}`)
+      return NextResponse.redirect(new URL('/sem-acesso', req.url))
+    }
+
     if (isAdmin) {
       return NextResponse.next()
     }
 
-    // -----------------------------------------------------------------
-    // DAQUI PARA BAIXO: RESTRIÇÕES PARA NON-ADMINS
-    // -----------------------------------------------------------------
+    const userHomePath = 
+      normalizedRole === 'supervisor' ? '/supervisor' :
+      (normalizedRole === 'operator' || normalizedRole === 'operador') ? '/operador' :
+      (normalizedRole === 'd2d' || normalizedRole === 'vendedor') ? '/vendedor' : null
 
-    // Proteção: Rotas exclusivas de Admin
     if (isAdminOnlyRoute(req)) {
-      console.warn(`⛔ [Middleware] Acesso negado: ${role} tentou acessar ${pathname}`)
-      const homeUrl = role === 'supervisor' ? '/supervisor' :
-                      role === 'operador' ? '/operador' :
-                      role === 'vendedor' ? '/vendedor' : '/';
-      return NextResponse.redirect(new URL(homeUrl, req.url))
+      if (userHomePath && pathname !== userHomePath) {
+        return NextResponse.redirect(new URL(userHomePath, req.url))
+      }
+      return NextResponse.next()
     }
 
-    // Proteção: Vendedor não pode acessar certas rotas
-    if (role === 'vendedor' && isNotForVendedor(req)) {
-      console.warn(`⛔ [Middleware] Vendedor bloqueado em: ${pathname}`)
-      return NextResponse.redirect(new URL('/vendedor', req.url))
+    if ((normalizedRole === 'd2d' || normalizedRole === 'vendedor') && isNotForVendedor(req)) {
+      if (pathname !== '/vendedor') {
+        return NextResponse.redirect(new URL('/vendedor', req.url))
+      }
+      return NextResponse.next()
     }
 
-    // ✅ Log de monitorização (opcional - sem bloquear)
-    console.log(`🔎 [Middleware] User: ${userId} Role: ${role} Path: ${pathname}`)
+    console.log(`🔎 [Middleware] ${normalizedRole} -> ${pathname}`)
   }
 
   return NextResponse.next()
