@@ -196,8 +196,8 @@ const FormModal = ({ table, type, data, id, userId, forcedOpen, onClose }: any) 
   };
 
   const handleFormSuccess = () => {
+    // ✅ Só fecha o modal - o VendasForm já fez router.refresh()
     handleCloseModal();
-    router.refresh();
   };
 
   const Form = () => {

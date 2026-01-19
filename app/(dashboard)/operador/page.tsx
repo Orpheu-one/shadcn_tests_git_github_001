@@ -1,40 +1,11 @@
-"use client" // ✅ ADICIONADO: Necessário para usar useState
+import OperadorDashboard from "@/components/OperadorDashboard"
+import { getCalendarEvents } from "@/lib/actions/user.actions"
 
-import { useState } from "react"; // ✅ ADICIONADO: Para criar o state
-import BigCalendar from "@/components/BigCalendar"
-import ListaVendas from "@/components/ListaVendas"
-import CustomCalendar from "@/components/CustomCalendar";
+const OperadorPage = async () => {
+  // ✅ Busca eventos no servidor (MUITO mais rápido)
+  const initialEvents = await getCalendarEvents()
 
-const OperadorPage = () => {
-  // ✅ ADICIONADO: State que conecta os dois calendários
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-
-  return (
-    <div className='w-full h-screen flex px-4 gap-4 flex-col md:flex-row lg:flex-row'>
-      
-      {/*left side*/}
-      <div className="w-full flex lg:w-2/3 dark:bg-white rounded-lg p-4 text-black">
-        {/* ✅ MODIFICADO: Passa a data selecionada para o BigCalendar */}
-        <BigCalendar selectedDate={selectedDate}/>
-      </div>
-
-      {/*right side*/}
-      <div className="w-full flex-wrap gap-4 lg:w-1/3 dark:bg-transparent rounded-r-lg">
-        <h2 className="text-lg font-semibold">
-          {/* ✅ MODIFICADO: Passa o handler para receber a data selecionada */}
-          <CustomCalendar 
-           showModeToggle={false}
-        showPresets={false}
-        showEvents={false}
-        defaultMode="single"
-          onDateSelect={setSelectedDate} />
-          <div className="mt-4"></div>
-          <ListaVendas />
-        </h2>
-      </div>
-      
-    </div>
-  )
+  return <OperadorDashboard initialEvents={initialEvents} />
 }
 
 export default OperadorPage

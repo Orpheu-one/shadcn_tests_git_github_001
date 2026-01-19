@@ -148,56 +148,68 @@ const VendasForm = ({
     }
   }, [type, eventId, setValue, isAdmin]);
 
-  const onSubmit = handleSubmit(async (formData) => {
-    const tid = toast.loading(type === "create" ? "A criar..." : "A atualizar...");
-    setIsSubmitting(true);
+  // ✅ SUBSTITUI A PARTE DO onSubmit (linhas ~148-172)
 
-    startTransition(async () => {
-      try {
-        const rawType = typeMap[vendaStatus.tipo];
-        const rawChannel = channelMap[vendaStatus.modalidade];
-        let finalStatus = statusMap[vendaStatus.status];
+const onSubmit = handleSubmit(async (formData) => {
+  const tid = toast.loading(type === "create" ? "A criar..." : "A atualizar...");
+  setIsSubmitting(true);
 
-        if (rawType === 'CALLBACK') {
-          finalStatus = 'PROJECT';
-        }
+  startTransition(async () => {
+    try {
+      const rawType = typeMap[vendaStatus.tipo];
+      const rawChannel = channelMap[vendaStatus.modalidade];
+      let finalStatus = statusMap[vendaStatus.status];
 
-        const payload = {
-          clientData: {
-            frst_name: formData.name,
-            lst_name: formData.apelido,
-            phone: formData.phone,
-            email: formData.email || undefined,
-            address: formData.address,
-          },
-          type: rawType,
-          channel: rawChannel,
-          status: finalStatus,
-          obs: formData.obs,
-          calledback_at: rawType === 'CALLBACK' ? formData.calledback_at : null,
-        };
-
-        let result;
-        if (type === "create") {
-          const opId = isAdmin && selectedOperatorId ? selectedOperatorId : currentUser?.id;
-          if (!opId) throw new Error("Não autenticado");
-          result = await createEvent({ ...payload, clerkUserId: opId });
-        } else {
-          if (!eventId) throw new Error("ID em falta");
-          result = await updateEvent(Number(eventId), payload);
-        }
-
-        if (result?.error) throw new Error(result.error);
-        toast.success("Operação concluída!", { id: tid });
-        if (onSuccess) onSuccess();
-        router.push('/lists/vendas');
-        router.refresh();
-      } catch (error: any) {
-        setIsSubmitting(false);
-        toast.error(error.message || "Erro na submissão", { id: tid });
+      if (rawType === 'CALLBACK') {
+        finalStatus = 'PROJECT';
       }
-    });
+
+      const payload = {
+        clientData: {
+          frst_name: formData.name,
+          lst_name: formData.apelido,
+          phone: formData.phone,
+          email: formData.email || undefined,
+          address: formData.address,
+        },
+        type: rawType,
+        channel: rawChannel,
+        status: finalStatus,
+        obs: formData.obs,
+        calledback_at: rawType === 'CALLBACK' ? formData.calledback_at : null,
+      };
+
+      let result;
+      if (type === "create") {
+        const opId = isAdmin && selectedOperatorId ? selectedOperatorId : currentUser?.id;
+        if (!opId) throw new Error("Não autenticado");
+        result = await createEvent({ ...payload, clerkUserId: opId });
+      } else {
+        if (!eventId) throw new Error("ID em falta");
+        result = await updateEvent(Number(eventId), payload);
+      }
+
+      if (result?.error) throw new Error(result.error);
+      
+      toast.success("Operação concluída!", { id: tid });
+      
+      // ✅ ALTERAÇÃO CRÍTICA: Chama onSuccess ANTES de qualquer navegação
+      if (onSuccess) {
+        onSuccess(); // Fecha o modal
+      }
+      
+      // ✅ Refresh para atualizar os dados (servidor recarrega eventos)
+      router.refresh();
+      
+      // ❌ REMOVIDO: router.push('/lists/vendas')
+      // Porquê? Se o modal foi aberto pelo BigCalendar, queremos ficar na mesma página
+      
+    } catch (error: any) {
+      setIsSubmitting(false);
+      toast.error(error.message || "Erro na submissão", { id: tid });
+    }
   });
+});
 
   if (isSubmitting) {
     return (

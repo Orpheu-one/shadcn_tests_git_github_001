@@ -2,7 +2,7 @@
 
 import { Calendar, dayjsLocalizer, View } from 'react-big-calendar'
 import dayjs from 'dayjs'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import FormModal from '@/components/FormModal'
 import { Button } from "@/components/ui/button"
 
@@ -10,20 +10,21 @@ const localizer = dayjsLocalizer(dayjs)
 
 interface CalendarEvent {
   id: number;
+  eventIdString: string;
   title: string;
   start: Date;
   end: Date;
   type: 'SALE' | 'CALLBACK';
   status: string;
   clientName: string;
-  operatorId: string;
+  operatorName: string;
+  obs: string;
   createdAt: Date;
-  obs?: string | null;
 }
 
 interface BigCalendarProps {
   selectedDate?: Date;
-  initialEvents?: CalendarEvent[]; // ✅ Opcional para quando não vem da BD
+  initialEvents?: CalendarEvent[];
 }
 
 const BigCalendar = ({ selectedDate, initialEvents = [] }: BigCalendarProps) => {
@@ -33,14 +34,26 @@ const BigCalendar = ({ selectedDate, initialEvents = [] }: BigCalendarProps) => 
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [selectedSlot, setSelectedSlot] = useState<{ start: Date; end: Date } | null>(null);
   const [events, setEvents] = useState<CalendarEvent[]>(initialEvents);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // ✅ FIX: Atualiza currentDate quando selectedDate muda
-  useState(() => {
+  // ✅ Simula loading inicial (só visual)
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // ✅ Atualiza eventos quando initialEvents mudar
+  useEffect(() => {
+    setEvents(initialEvents);
+  }, [initialEvents]);
+
+  // ✅ Atualiza currentDate quando selectedDate muda
+  useEffect(() => {
     if (selectedDate) {
       setCurrentDate(selectedDate);
       setView('day');
     }
-  });
+  }, [selectedDate]);
 
   const handleViewChange = (newView: View) => {
     setView(newView);
@@ -71,19 +84,17 @@ const BigCalendar = ({ selectedDate, initialEvents = [] }: BigCalendarProps) => 
     setOpenModal(false);
     setSelectedEvent(null);
     setSelectedSlot(null);
-    
-    // ✅ Recarrega a página para buscar novos eventos
-    window.location.reload();
   }
 
   const toggleView = () => {
     setView(prev => prev === 'week' ? 'day' : 'week')
   }
 
+  // 🎨 Cores dos eventos
   const eventStyleGetter = (event: CalendarEvent) => {
     const backgroundColor = event.type === 'SALE' 
-      ? '#facc15' // yellow-400
-      : '#d8b4fe'; // purple-300
+      ? '#fde047' // yellow-300 (vendas)
+      : '#d8b4fe'; // purple-300 (callbacks)
 
     return {
       style: {
@@ -99,18 +110,26 @@ const BigCalendar = ({ selectedDate, initialEvents = [] }: BigCalendarProps) => 
     };
   };
 
+  // ✅ Componente de evento customizado (ID + Nome + Obs)
   const CustomEvent = ({ event }: { event: CalendarEvent }) => {
     return (
-      <div className="flex flex-col h-full">
-        <div className="font-bold text-[10px] truncate">
-          {event.title}
+      <div className="flex flex-col h-full overflow-hidden p-1">
+        {/* 📌 Event ID - Tamanho MD */}
+        <div className="font-black text-sm truncate uppercase tracking-wide opacity-80">
+          {event.eventIdString}
         </div>
-        <div className="text-[9px] opacity-80 truncate">
+        
+        {/* 👤 Nome do Cliente - Tamanho SM */}
+        <div className="font-bold text-xs truncate mt-1">
           {event.clientName}
         </div>
-        <div className="text-[8px] opacity-60">
-          {dayjs(event.createdAt).format('DD/MM HH:mm')}
-        </div>
+        
+        {/* 📝 Observações - Tamanho SM */}
+        {event.obs && (
+          <div className="text-xs opacity-70 mt-1 line-clamp-2 leading-tight">
+            {event.obs}
+          </div>
+        )}
       </div>
     );
   };
@@ -148,6 +167,17 @@ const BigCalendar = ({ selectedDate, initialEvents = [] }: BigCalendarProps) => 
         </div>
       </div>
     )
+  }
+
+  // ✅ Loader customizado (estilo CustomCalendar)
+  if (isLoading) {
+    return (
+      <div className="w-full h-full bg-gray-300 rounded-xl animate-pulse flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-sm font-semibold text-slate-700">A carregar calendário...</div>
+        </div>
+      </div>
+    );
   }
 
   return (

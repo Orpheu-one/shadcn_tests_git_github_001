@@ -322,3 +322,47 @@ export async function deleteEventAction(eventId: number) {
     return { error: error.message };
   }
 }
+
+// ==========================================
+// 🆕 GET EVENTS FOR CALENDAR (Server Action)
+// ==========================================
+
+export async function getCalendarEvents() {
+  try {
+    const events = await prisma.event.findMany({
+      include: {
+        client: true,
+        user: true
+      },
+      orderBy: {
+        created_at: 'desc'
+      }
+    });
+
+    // ✅ Transforma para formato do BigCalendar
+    return events.map((event) => {
+      // 🔧 Para VENDAS: aparece na hora de criação
+      // 🔧 Para CALLBACKS: aparece na hora agendada
+      const eventDate = event.type === 'CALLBACK' && event.calledback_at
+        ? new Date(event.calledback_at)
+        : new Date(event.created_at);
+
+      return {
+        id: event.id,
+        eventIdString: event.event_id,
+        title: event.type === 'SALE' ? '💰 Venda' : '📞 Callback',
+        start: eventDate.toISOString(), // ✅ Serializa para string
+        end: new Date(eventDate.getTime() + 60 * 60 * 1000).toISOString(), // +1h
+        type: event.type,
+        status: event.status,
+        clientName: `${event.client.frst_name} ${event.client.lst_name || ''}`.trim(),
+        operatorName: `${event.user.frst_name} ${event.user.lst_name}`,
+        obs: event.obs || '',
+        createdAt: event.created_at.toISOString()
+      };
+    });
+  } catch (error) {
+    console.error('❌ [getCalendarEvents] Erro:', error);
+    return [];
+  }
+}
