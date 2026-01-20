@@ -324,12 +324,38 @@ export async function deleteEventAction(eventId: number) {
 }
 
 // ==========================================
+// 🆕 HELPERS DE PERMISSÕES
+// ==========================================
+
+function canViewAllEvents(role: string): boolean {
+  const adminRoles = ['admin', 'super_admin', 'supervisor'];
+  return adminRoles.includes(role.toLowerCase());
+}
+
+// ==========================================
 // 🆕 GET EVENTS FOR CALENDAR (Server Action)
 // ==========================================
 
-export async function getCalendarEvents() {
+export async function getCalendarEvents(clerkUserId?: string, userRole?: string) {
   try {
+    const whereClause: any = {};
+    
+    // 🔒 Filtro por operador (se não for admin/supervisor)
+    if (clerkUserId && userRole && !canViewAllEvents(userRole)) {
+      const user = await prisma.user.findUnique({ 
+        where: { userId: clerkUserId } 
+      });
+      
+      if (user) {
+        whereClause.userId = user.id;
+        console.log(`🔒 [getCalendarEvents] Operador ${user.frst_name} - Filtrando eventos`);
+      }
+    } else {
+      console.log(`👑 [getCalendarEvents] Admin/Supervisor - Mostrando todos os eventos`);
+    }
+
     const events = await prisma.event.findMany({
+      where: whereClause,
       include: {
         client: true,
         user: true
@@ -351,8 +377,8 @@ export async function getCalendarEvents() {
         id: event.id,
         eventIdString: event.event_id,
         title: event.type === 'SALE' ? '💰 Venda' : '📞 Callback',
-        start: eventDate.toISOString(), // ✅ Serializa para string
-        end: new Date(eventDate.getTime() + 60 * 60 * 1000).toISOString(), // +1h
+        start: eventDate.toISOString(),
+        end: new Date(eventDate.getTime() + 60 * 60 * 1000).toISOString(),
         type: event.type,
         status: event.status,
         clientName: `${event.client.frst_name} ${event.client.lst_name || ''}`.trim(),
@@ -363,6 +389,63 @@ export async function getCalendarEvents() {
     });
   } catch (error) {
     console.error('❌ [getCalendarEvents] Erro:', error);
+    return [];
+  }
+}
+
+// 🆕 GET EVENTS LIST (para páginas /lists/vendas, /lists/callbacks)
+export async function getEventsList(filters?: {
+  clerkUserId?: string;
+  userRole?: string;
+  type?: 'SALE' | 'CALLBACK' | 'ALL';
+  status?: 'PROJECT' | 'CLOSED' | 'LOST' | 'ALL';
+  searchQuery?: string;
+}) {
+  try {
+    const whereClause: any = {};
+    
+    // 🔒 Filtro por operador
+    if (filters?.clerkUserId && filters?.userRole && !canViewAllEvents(filters.userRole)) {
+      const user = await prisma.user.findUnique({ 
+        where: { userId: filters.clerkUserId } 
+      });
+      if (user) whereClause.userId = user.id;
+    }
+    
+    // 🔍 Filtro por tipo
+    if (filters?.type && filters.type !== 'ALL') {
+      whereClause.type = filters.type;
+    }
+    
+    // 🔍 Filtro por status
+    if (filters?.status && filters.status !== 'ALL') {
+      whereClause.status = filters.status;
+    }
+    
+    // 🔍 Search query (nome do cliente ou event_id)
+    if (filters?.searchQuery) {
+      whereClause.OR = [
+        { event_id: { contains: filters.searchQuery } },
+        { client: { frst_name: { contains: filters.searchQuery } } },
+        { client: { lst_name: { contains: filters.searchQuery } } },
+        { client: { phone: { contains: filters.searchQuery } } }
+      ];
+    }
+
+    const events = await prisma.event.findMany({
+      where: whereClause,
+      include: {
+        client: true,
+        user: true
+      },
+      orderBy: {
+        created_at: 'desc'
+      }
+    });
+
+    return events;
+  } catch (error) {
+    console.error('❌ [getEventsList] Erro:', error);
     return [];
   }
 }

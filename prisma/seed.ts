@@ -1,84 +1,142 @@
-import { PrismaClient, UserRole, EventType, EventChannel, EventStatus } from '@prisma/client';
-import { faker } from '@faker-js/faker';
-import 'dotenv/config';
+import { PrismaClient, BadgeType } from '@prisma/client'
 
-const prisma = new PrismaClient();
-
-const NUM_USERS = 15;
-const NUM_EVENTS = 10;
-
-const userRoles: UserRole[] = [
-  ...Array(8).fill(UserRole.OPERATOR),
-  UserRole.ADMIN,
-  UserRole.SUPERVISOR,
-  ...Array(5).fill(UserRole.D2D),
-];
-
-function generateInternalId(): string {
-  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-  let result = '';
-  for (let i = 0; i < 4; i++) {
-    result += letters.charAt(Math.floor(Math.random() * letters.length));
-  }
-  return result;
-}
+const prisma = new PrismaClient()
 
 async function main() {
-  console.log('🚀 A começar o processo de Seed...');
+  console.log('🌱 Starting seed...')
 
-  await prisma.event.deleteMany();
-  await prisma.user.deleteMany();
-  await prisma.client.deleteMany();
-  console.log('✨ Dados antigos removidos.');
-
-  const createdUsers = [];
-  for (let i = 0; i < NUM_USERS; i++) {
-    const role = userRoles[i];
-    const frst_name = faker.person.firstName();
-    const lst_name = faker.person.lastName();
+  // ==========================================
+  // 1. CRIAR BADGES INICIAIS
+  // ==========================================
+  
+  const badges = [
+    // DAILY BADGES
+    {
+      name: 'first_sale_day',
+      displayName: 'Primeira Venda do Dia',
+      description: 'Fez a primeira venda do dia!',
+      icon: '🌅',
+      type: 'DAILY' as BadgeType,
+      minSales: 1
+    },
+    {
+      name: 'top_seller_day',
+      displayName: 'Top Seller do Dia',
+      description: 'Mais vendas no dia!',
+      icon: '👑',
+      type: 'DAILY' as BadgeType,
+    },
+    {
+      name: 'five_sales_day',
+      displayName: '5 Vendas em Um Dia',
+      description: 'Fechou 5 vendas num único dia!',
+      icon: '🔥',
+      type: 'DAILY' as BadgeType,
+      minSales: 5
+    },
     
-    const user = await prisma.user.create({
-      data: {
-        userId: `user_${faker.string.alphanumeric(15)}`, // ID do Clerk
-        internalId: generateInternalId(),
-        email: faker.internet.email({ firstName: frst_name, lastName: lst_name }).toLowerCase(),
-        frst_name: frst_name,
-        lst_name: lst_name,
-        phone: faker.helpers.replaceSymbols('9########'), 
-        role: role,
-        is_active: true,
-        avatar: faker.image.avatar(),
-        desc: faker.person.bio(),
-      },
-    });
-    createdUsers.push(user);
+    // WEEKLY BADGES
+    {
+      name: 'top_seller_week',
+      displayName: 'Top Seller da Semana',
+      description: 'Mais vendas na semana!',
+      icon: '🏆',
+      type: 'WEEKLY' as BadgeType,
+    },
+    {
+      name: 'consistent_performer',
+      displayName: 'Performance Consistente',
+      description: 'Vendeu todos os dias da semana!',
+      icon: '⚡',
+      type: 'WEEKLY' as BadgeType,
+    },
+    
+    // MONTHLY BADGES
+    {
+      name: 'top_seller_month',
+      displayName: 'Top Seller do Mês',
+      description: 'Mais vendas no mês!',
+      icon: '🥇',
+      type: 'MONTHLY' as BadgeType,
+    },
+    {
+      name: 'fifty_sales_month',
+      displayName: '50 Vendas no Mês',
+      description: 'Fechou 50 vendas num mês!',
+      icon: '💯',
+      type: 'MONTHLY' as BadgeType,
+      minSales: 50
+    },
+    
+    // MILESTONE BADGES
+    {
+      name: 'first_sale_ever',
+      displayName: 'Primeira Venda',
+      description: 'Fez a primeira venda!',
+      icon: '🎉',
+      type: 'MILESTONE' as BadgeType,
+      minSales: 1
+    },
+    {
+      name: 'hundred_sales',
+      displayName: 'Centenário',
+      description: '100 vendas totais!',
+      icon: '💎',
+      type: 'MILESTONE' as BadgeType,
+      minSales: 100
+    },
+    {
+      name: 'five_hundred_sales',
+      displayName: 'Lenda',
+      description: '500 vendas totais!',
+      icon: '🌟',
+      type: 'MILESTONE' as BadgeType,
+      minSales: 500
+    },
+  ]
+
+  for (const badge of badges) {
+    await prisma.badge.upsert({
+      where: { name: badge.name },
+      update: {},
+      create: badge
+    })
   }
 
-  for (let i = 0; i < NUM_EVENTS; i++) {
-    const user = createdUsers[i % createdUsers.length]; 
-    const client = await prisma.client.create({
-      data: {
-        frst_name: faker.person.firstName(),
-        lst_name: faker.person.lastName(),
-        phone: faker.helpers.replaceSymbols('9########'),
-        email: faker.internet.email(),
-        address: faker.location.streetAddress(true),
-      },
-    });
+  console.log(`✅ Created ${badges.length} badges`)
 
-    await prisma.event.create({
+  // ==========================================
+  // 2. ATUALIZAR USERS EXISTENTES (opcional)
+  // ==========================================
+  
+  // Distribuir users existentes entre teams
+  const operatorsWithoutTeam = await prisma.user.findMany({
+    where: { 
+      role: 'OPERATOR',
+      team: null 
+    }
+  })
+
+  for (let i = 0; i < operatorsWithoutTeam.length; i++) {
+    await prisma.user.update({
+      where: { id: operatorsWithoutTeam[i].id },
       data: {
-        event_id: `EV-${faker.string.alphanumeric(6).toUpperCase()}`,
-        userId: user.id,
-        clientId: client.id, 
-        type: EventType.SALE, 
-        status: EventStatus.PROJECT,
-        obs: faker.lorem.paragraph(1),
-        Scheduled: faker.date.soon({ days: 7 }),
-      },
-    });
+        team: i % 2 === 0 ? 'WINNER_TEAM' : 'ELITE_TEAM',
+        hireDate: new Date() // Data atual como placeholder
+      }
+    })
   }
-  console.log('✅ Seed concluída com sucesso!');
+
+  console.log(`✅ Updated ${operatorsWithoutTeam.length} operators with teams`)
+
+  console.log('🌱 Seed completed!')
 }
 
-main().catch(e => { console.error(e); process.exit(1); }).finally(() => prisma.$disconnect());
+main()
+  .catch((e) => {
+    console.error(e)
+    process.exit(1)
+  })
+  .finally(async () => {
+    await prisma.$disconnect()
+  })

@@ -1,18 +1,30 @@
+// Prisma Schema v6.19.0
+// Merged: Original + Eraser Schema
+
 datasource db {
-  provider = "mysql"
-  url      = env("DATABASE_URL")
-  relationMode="prisma"
+  provider      = "mysql"
+  url           = env("DATABASE_URL")
+  relationMode  = "prisma"
 }
 
 generator client {
   provider = "prisma-client-js"
 }
 
+// ==========================================
+// ENUMS
+// ==========================================
+
 enum UserRole {
   OPERATOR
   ADMIN
   D2D
   SUPERVISOR
+}
+
+enum Team {
+  WINNER_TEAM
+  ELITE_TEAM
 }
 
 enum EventType {
@@ -31,53 +43,282 @@ enum EventStatus {
   LOST
 }
 
+enum BadgeType {
+  DAILY
+  WEEKLY
+  MONTHLY
+  MILESTONE
+}
+
+// ==========================================
+// USER & AUTHENTICATION
+// ==========================================
+
 model User {
   id         Int      @id @default(autoincrement())
-  userId     String   @unique // Este é o ID do Clerk
-  internalId String   @unique @db.VarChar(4) //  ID de 4 letras (ex: JOSE)
+  userId     String   @unique 
+  internalId String   @unique @db.VarChar(4) 
   email      String   @unique
-  frst_name  String
+  frst_name  String   
   lst_name   String
   phone      String?
   avatar     String?
-  desc       String?
-  role       UserRole  @default(OPERATOR)
-  is_active  Boolean   @default(true)
+  desc       String?  @db.Text
+  role       UserRole @default(OPERATOR)
+  is_active  Boolean  @default(true)
+  
+  team       Team?    @default(WINNER_TEAM)
+  
+  supervisorId Int?   
+  // Ajuste: NoAction para evitar ciclo na auto-relação
+  supervisor   User?  @relation("SupervisorOperators", fields: [supervisorId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  operators    User[] @relation("SupervisorOperators") 
+  
+  maxOperators Int?   
+  hireDate     DateTime? 
+  
   created_at DateTime @default(now())
-  events     Event[]
-
+  updated_at DateTime? @default(now()) @updatedAt
+  events          Event[]
+  userBadges      UserBadge[]
+  posts           Post[]       @relation("AuthorPosts")
+  comments        Comment[]
+  likes           Like[]
+  stories         Story[]
+  
+  following       Follow[]     @relation("Follower")
+  followers       Follow[]     @relation("Followed")
+  blocking        Block[]      @relation("Blocker")
+  blockedBy       Block[]      @relation("Blocked")
+  
   @@index([internalId])
+  @@index([role])
+  @@index([team])
+  @@index([supervisorId])
+  @@index([is_active])
 }
+
+// ==========================================
+// CLIENT
+// ==========================================
 
 model Client {
-  id        Int      @id @default(autoincrement())
-  frst_name String
-  lst_name  String?
-  phone     String   @unique
-  email     String?  @unique
-  address   String
-  lat       Float?
-  long      Float?
-  event     Event?
-
+  id         Int     @id @default(autoincrement())
+  frst_name  String
+  lst_name   String?
+  phone      String  @unique
+  email      String? @unique
+  address    String  @db.Text
+  lat        Float?  @db.Double 
+  lng        Float?  @db.Double 
+  
+  event      Event?
+  
   @@index([phone])
+  @@index([email])
 }
 
-model Event {
-  id           Int        @id @default(autoincrement())
-  event_id     String     @unique 
-  userId       Int
-  user         User       @relation(fields: [userId], references: [id])
-  clientId     Int        @unique 
-  client       Client     @relation(fields: [clientId], references: [id])
-  type         EventType    @default(SALE)
-  channel      EventChannel @default(REMOTE)
-  status       EventStatus  @default(PROJECT)
-  obs          String?      @db.Text
-  Scheduled    DateTime?
-  created_at   DateTime @default(now())
-  updated_at   DateTime @updatedAt
-  calledback_at DateTime?
+// ==========================================
+// EVENTS & SALES
+// ==========================================
 
+model Event {
+  id            Int          @id @default(autoincrement())
+  event_id      String       @unique 
+  
+  userId        Int
+  // Ajuste: NoAction
+  user          User         @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  
+  clientId      Int          @unique
+  client        Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  
+  type          EventType    @default(SALE)
+  channel       EventChannel @default(REMOTE)
+  status        EventStatus  @default(PROJECT)
+  obs           String?      @db.Text
+  
+  saleAmount    Decimal?     @db.Decimal(10, 2) 
+  saleCurrency  String?      @db.VarChar(3)     
+  
+  Scheduled     DateTime?    
+  created_at    DateTime     @default(now())
+  updated_at    DateTime? @default(now()) @updatedAt
+  calledback_at DateTime?    
+  closed_at     DateTime?    
+  
+  posts         Post[]
+  stories       Story[]
+  
+  @@index([userId])
   @@index([status])
+  @@index([type])
+  @@index([created_at])
+  @@index([closed_at])
+}
+
+// ==========================================
+// GAMIFICATION - BADGES
+// ==========================================
+
+model Badge {
+  id           Int         @id @default(autoincrement())
+  name         String      @unique 
+  displayName  String      
+  description  String?     @db.Text
+  icon         String?     
+  type         BadgeType
+  
+  minSales     Int?        
+  
+  created_at   DateTime    @default(now())
+  
+  userBadges   UserBadge[]
+  
+  @@index([type])
+}
+
+model UserBadge {
+  id         Int      @id @default(autoincrement())
+  
+  userId     Int
+  // Ajuste: NoAction
+  user       User     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  
+  badgeId    Int
+  badge      Badge    @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+  
+  salesCount Int?     
+  grantedAt  DateTime @default(now())
+  
+  @@unique([userId, badgeId, grantedAt]) 
+  @@index([userId])
+  @@index([badgeId])
+  @@index([grantedAt])
+}
+
+// ==========================================
+// SOCIAL NETWORK
+// ==========================================
+
+model Post {
+  id         Int      @id @default(autoincrement())
+  
+  authorId   Int
+  // Ajuste: NoAction
+  author     User     @relation("AuthorPosts", fields: [authorId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  
+  eventId    Int?     
+  // Ajuste: NoAction
+  event      Event?   @relation(fields: [eventId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  
+  content    String   @db.Text
+  imageUrl   String?  
+  
+  likesCount Int      @default(0) 
+  
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  
+  likes      Like[]
+  comments   Comment[]
+  
+  @@index([authorId])
+  @@index([eventId])
+  @@index([created_at])
+}
+
+model Like {
+  id         Int      @id @default(autoincrement())
+  
+  userId     Int
+  // Ajuste: NoAction
+  user       User     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  
+  postId     Int
+  // Ajuste: NoAction
+  post       Post     @relation(fields: [postId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  
+  liked_at   DateTime @default(now())
+  
+  @@unique([userId, postId]) 
+  @@index([postId])
+  @@index([userId])
+}
+
+model Comment {
+  id         Int      @id @default(autoincrement())
+  
+  postId     Int
+  // Ajuste: NoAction
+  post       Post     @relation(fields: [postId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  
+  authorId   Int
+  // Ajuste: NoAction
+  author     User     @relation(fields: [authorId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  
+  body       String   @db.Text
+  created_at DateTime @default(now())
+  
+  @@index([postId])
+  @@index([authorId])
+  @@index([created_at])
+}
+
+model Story {
+  id         Int      @id @default(autoincrement())
+  
+  operatorId Int
+  // Ajuste: NoAction
+  operator   User     @relation(fields: [operatorId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  
+  eventId    Int?     
+  // Ajuste: NoAction
+  event      Event?   @relation(fields: [eventId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  
+  mediaUrl   String   
+  caption    String?  @db.Text
+  
+  created_at DateTime @default(now())
+  expires_at DateTime 
+  
+  @@index([operatorId])
+  @@index([expires_at])
+  @@index([created_at])
+}
+
+model Follow {
+  id          Int      @id @default(autoincrement())
+  
+  followerId  Int
+  // Ajuste: NoAction
+  follower    User     @relation("Follower", fields: [followerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  
+  followedId  Int
+  // Ajuste: NoAction
+  followed    User     @relation("Followed", fields: [followedId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  
+  followed_at DateTime @default(now())
+  
+  @@unique([followerId, followedId])
+  @@index([followerId])
+  @@index([followedId])
+}
+
+model Block {
+  id         Int      @id @default(autoincrement())
+  
+  blockerId  Int
+  // Ajuste: NoAction
+  blocker    User     @relation("Blocker", fields: [blockerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  
+  blockedId  Int
+  // Ajuste: NoAction
+  blocked    User     @relation("Blocked", fields: [blockedId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  
+  blocked_at DateTime @default(now())
+  
+  @@unique([blockerId, blockedId])
+  @@index([blockerId])
+  @@index([blockedId])
 }
