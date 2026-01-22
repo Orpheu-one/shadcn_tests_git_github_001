@@ -7,7 +7,7 @@ import prisma from "@/lib/prisma"
 import { ITEMS_PER_PAGE } from "@/lib/settings"
 import { Prisma } from "@prisma/client"
 import Image from "next/image"
-import { auth, currentUser } from '@clerk/nextjs/server' // ✅ ADICIONADO
+import { auth } from '@clerk/nextjs/server' // ✅ CORRIGIDO: Remove currentUser
 
 interface SearchProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -65,7 +65,7 @@ const renderRow = (item: EventWithRelations) => {
   return (
     <tr 
       key={item.id} 
-      className="border-b border-gray-500 even:bg-purple-50 hover:bg-purple-100 text-sm"
+      className="border-b border-gray-400 odd:bg-gray-100 even:bg-gray-200 hover:bg-purple-200 transition-colors text-sm"
     >
       <td className="p-4">
         <span className="font-bold">{item.event_id}</span>
@@ -100,24 +100,25 @@ const renderRow = (item: EventWithRelations) => {
 
 const EventsPage = async ({ searchParams }: SearchProps) => {
   const params = await searchParams;
-  const { page } = params;
+  const { page, query } = params;
   const p = page ? parseInt(page as string, 10) : 1;
 
-  // ✅ ADICIONADO: Buscar user autenticado
-  const { userId } = await auth();
-  const user = await currentUser();
+  // ✅ CORRIGIDO: Usa SÓ auth() e pega sessionClaims
+  const { userId, sessionClaims } = await auth();
   
-  if (!userId || !user) {
+  if (!userId) {
     return <div className="p-8 text-center">Não autenticado</div>;
   }
 
-  // ✅ ADICIONADO: Pegar role do metadata
-  const userRole = (user.publicMetadata?.role as string)?.toLowerCase() || 'operator';
+  // ✅ Pega role do sessionClaims (mesma lógica do middleware)
+  const userRole = (sessionClaims?.metadata as any)?.userRole?.toLowerCase() || 
+                   (sessionClaims?.publicMetadata as any)?.role?.toLowerCase() || 
+                   'operator';
   
-  // ✅ ADICIONADO: Verificar se pode ver todos os eventos
+  // ✅ Verificar se pode ver todos os eventos
   const canViewAll = ['admin', 'super_admin', 'supervisor'].includes(userRole);
 
-  // ✅ ADICIONADO: Construir filtro condicional
+  // ✅ MODIFICADO: Construir filtro condicional COM SEARCH
   const whereClause: Prisma.EventWhereInput = {};
   
   if (!canViewAll) {
@@ -132,6 +133,18 @@ const EventsPage = async ({ searchParams }: SearchProps) => {
     }
   } else {
     console.log(`👑 [VendasPage] ${userRole.toUpperCase()} - Mostrando todos os eventos`);
+  }
+
+  // 🔍 ADICIONADO: Search query (ID venda, nome cliente, telefone, email)
+  if (query && typeof query === 'string') {
+    whereClause.OR = [
+      { event_id: { contains: query } }, // 🆔 ID da venda
+      { client: { frst_name: { contains: query } } }, // 👤 Nome
+      { client: { lst_name: { contains: query } } }, // 👤 Apelido
+      { client: { phone: { contains: query } } }, // 📞 Telefone
+      { client: { email: { contains: query } } }, // 📧 Email
+    ];
+    console.log(`🔍 [VendasPage] Search query: "${query}"`);
   }
 
   // ✅ MODIFICADO: Adicionar whereClause na query
@@ -166,7 +179,7 @@ const EventsPage = async ({ searchParams }: SearchProps) => {
   }
 
   return (
-    <div className='flex-1 bg-white p-4 rounded-lg m-4 mt-0'>
+    <div className='flex-1 bg-gray-300 p-4 rounded-lg m-4 mt-0'>
       <div className="flex items-center justify-between mb-4">
         <h1 className="hidden md:block text-lg font-semibold text-black">
           Lista de Vendas
@@ -180,8 +193,11 @@ const EventsPage = async ({ searchParams }: SearchProps) => {
         <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
           <TableSearch />
           <div className="flex items-center gap-4 self-end">
-            <button className="rounded-full bg-yellow-500 p-2 hover:bg-yellow-600">
+            <button className="rounded-full bg-yellow-500 p-2 hover:bg-yellow-600 transition duration-150">
               <Image src="/filter.png" alt="" width={15} height={15} />
+            </button>
+            <button className="rounded-full bg-purple-500 p-2 hover:bg-purple-600 transition duration-150">
+              <Image src="/sort.png" alt="" width={15} height={15} />
             </button>
             {/* ✅ MODIFICADO: Todos podem criar vendas */}
             <FormModal table="vendas" type="create" />

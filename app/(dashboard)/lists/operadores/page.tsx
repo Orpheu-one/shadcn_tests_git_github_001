@@ -22,16 +22,30 @@ const columns = [
   { header: "Nome (Frst_name)", accessor: "name", className: "hidden md:table-cell" },
   { header: "Telefone", accessor: "phone", className: "hidden md:table-cell" },
   { header: "Nível de Acesso (Role)", accessor: "role", className: "hidden lg:table-cell" }, 
-  { header: "Ações", accessor: "actions" },
+  { header: "Acções", accessor: "actions" },
 ];
 
 const OperadoresPage = async ({ searchParams }: SearchProps) => {
   const params = await searchParams;
-  const { page, ...queryParams } = params;
-  
+  const { page, query, ...queryParams } = params; // ✅ ADICIONADO: query
   const p = page ? parseInt(page as string, 10) : 1;
 
+  // ✅ ADICIONADO: Construir filtro de search
+  const whereClause: Prisma.UserWhereInput = {};
+
+  if (query && typeof query === 'string') {
+    whereClause.OR = [
+      { frst_name: { contains: query } },      // 👤 Nome
+      { lst_name: { contains: query } },       // 👤 Apelido
+      { email: { contains: query } },          // 📧 Email
+      { internalId: { contains: query } },     // 🆔 ID interno (JOSE, MARI, etc.)
+      { phone: { contains: query } },          // 📞 Telefone
+    ];
+    console.log(`🔍 [OperadoresPage] Search query: "${query}"`);
+  }
+
   const operadores: UserWithEvents[] = await prisma.user.findMany({
+    where: whereClause, // ✅ ADICIONADO: Filtro aplicado
     include: {
       events: true,
     },
@@ -42,13 +56,16 @@ const OperadoresPage = async ({ searchParams }: SearchProps) => {
     },
   });
 
-  const count = await prisma.user.count();
+  // ✅ ADICIONADO: Count filtrado também
+  const count = await prisma.user.count({
+    where: whereClause,
+  });
 
-  // ✅ ÚNICA MUDANÇA: Definir renderRow DENTRO do componente
+  // ✅ Definir renderRow DENTRO do componente (mesmo estilo que Vendas)
   const renderRow = (item: UserWithEvents) => (
     <tr 
       key={item.id} 
-      className="border-b border-gray-500 even:bg-neutral-100 hover:bg-purple-300"
+      className="border-b border-gray-400 odd:bg-gray-100 even:bg-gray-200 hover:bg-purple-200 transition-colors"
     >
       <td className="flex items-center gap-4 p-4">
         <Image 
@@ -70,14 +87,12 @@ const OperadoresPage = async ({ searchParams }: SearchProps) => {
 
       <td className=""> 
         <div className="flex items-center gap-2">
-          {/* ✅ CAST explícito para UserRole */}
           <FormModal 
             table="operador" 
             type="edit" 
             userId={item.userId}
             userRole={item.role as UserRole}
           />
-        
           {role === "admin" && (
             <FormModal 
               table="operador" 
@@ -106,17 +121,16 @@ const OperadoresPage = async ({ searchParams }: SearchProps) => {
   }
 
   return (
-    <div className='flex-1 bg-neutral-200 p-4 rounded-lg m-4 mt-0'>
+    <div className='flex-1 bg-gray-300 p-4 rounded-lg m-4 mt-0'>
       {/* TOP */}
       <div className="flex items-center justify-between">
         <h1 className="hidden md:block text-lg font-semibold text-black mt-4">
           Lista de Operadores
         </h1>
-      
         <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
           <TableSearch />
           <div className="flex items-center gap-4 self-end">
-            <button className="rounded-full items-center justify-content bg-yellow-600 p-2 hover:bg-yellow-700 transition duration-150">
+            <button className="rounded-full items-center justify-content bg-yellow-500 p-2 hover:bg-yellow-600 transition duration-150">
               <Image src="/filter.png" alt="Filtro" width={15} height={15} />
             </button>
             <button className="rounded-full items-center justify-content bg-purple-500 p-2 hover:bg-purple-600 transition duration-150">
@@ -128,12 +142,10 @@ const OperadoresPage = async ({ searchParams }: SearchProps) => {
           </div>
         </div>
       </div>
-      
       {/* LISTA - USA O MESMO Table COMPONENT */}
       <div className="text-black overflow-x-auto">
         <Table columns={columns} renderRow={renderRow} data={operadores} />
       </div>
-      
       {/* PAGINATION */}
       <div className="mt-4">
         <Pagination page={p} count={count} />
