@@ -2,6 +2,7 @@ import FormModal from "@/components/FormModal"
 import Pagination from "@/components/Pagination"
 import Table from "@/components/Table"
 import TableSearch from "@/components/TableSearch"
+import SortDropdown from "@/components/SortDropdown" // ✅ ADICIONADO
 import { role } from "@/lib/data"
 import prisma from "@/lib/prisma" 
 import { ITEMS_PER_PAGE } from "@/lib/settings"
@@ -27,7 +28,7 @@ const columns = [
 
 const OperadoresPage = async ({ searchParams }: SearchProps) => {
   const params = await searchParams;
-  const { page, query, ...queryParams } = params; // ✅ ADICIONADO: query
+  const { page, query, sort, ...queryParams } = params; // ✅ ADICIONADO: sort
   const p = page ? parseInt(page as string, 10) : 1;
 
   // ✅ ADICIONADO: Construir filtro de search
@@ -35,31 +36,60 @@ const OperadoresPage = async ({ searchParams }: SearchProps) => {
 
   if (query && typeof query === 'string') {
     whereClause.OR = [
-      { frst_name: { contains: query } },      // 👤 Nome
-      { lst_name: { contains: query } },       // 👤 Apelido
-      { email: { contains: query } },          // 📧 Email
-      { internalId: { contains: query } },     // 🆔 ID interno (JOSE, MARI, etc.)
-      { phone: { contains: query } },          // 📞 Telefone
+      { frst_name: { contains: query } },
+      { lst_name: { contains: query } },
+      { email: { contains: query } },
+      { internalId: { contains: query } },
+      { phone: { contains: query } },
     ];
     console.log(`🔍 [OperadoresPage] Search query: "${query}"`);
   }
 
+  // ✅ ADICIONADO: Definir ordenação
+  const sortParam = (sort as string) || 'nome-az';
+  let orderBy: Prisma.UserOrderByWithRelationInput = { frst_name: 'asc' }; // Default
+
+  switch (sortParam) {
+    case 'nome-za':
+      orderBy = { frst_name: 'desc' };
+      break;
+    case 'id-interno':
+      orderBy = { internalId: 'asc' };
+      break;
+    case 'role':
+      orderBy = { role: 'asc' };
+      break;
+    case 'recente':
+      orderBy = { created_at: 'desc' };
+      break;
+    default: // 'nome-az'
+      orderBy = { frst_name: 'asc' };
+  }
+
+  console.log(`🔄 [OperadoresPage] Sorting por: ${sortParam}`);
+
   const operadores: UserWithEvents[] = await prisma.user.findMany({
-    where: whereClause, // ✅ ADICIONADO: Filtro aplicado
+    where: whereClause,
     include: {
       events: true,
     },
     take: ITEMS_PER_PAGE,
     skip: (p - 1) * ITEMS_PER_PAGE,
-    orderBy: {
-      frst_name: 'asc'
-    },
+    orderBy: orderBy, // ✅ ADICIONADO: Ordenação dinâmica
   });
 
-  // ✅ ADICIONADO: Count filtrado também
   const count = await prisma.user.count({
     where: whereClause,
   });
+
+  // ✅ ATUALIZADO: Opções com ícones Lucide
+  const sortOptions = [
+    { value: 'nome-az', label: 'Nome A-Z', icon: 'user' },
+    { value: 'nome-za', label: 'Nome Z-A', icon: 'user' },
+    { value: 'id-interno', label: 'Por ID Interno', icon: 'hash' },
+    { value: 'role', label: 'Por Role', icon: 'target' },
+    { value: 'recente', label: 'Mais recente', icon: 'calendar' },
+  ];
 
   // ✅ Definir renderRow DENTRO do componente (mesmo estilo que Vendas)
   const renderRow = (item: UserWithEvents) => (
@@ -133,9 +163,8 @@ const OperadoresPage = async ({ searchParams }: SearchProps) => {
             <button className="rounded-full items-center justify-content bg-yellow-500 p-2 hover:bg-yellow-600 transition duration-150">
               <Image src="/filter.png" alt="Filtro" width={15} height={15} />
             </button>
-            <button className="rounded-full items-center justify-content bg-purple-500 p-2 hover:bg-purple-600 transition duration-150">
-              <Image src="/sort.png" alt="Ordenar" width={15} height={15} />
-            </button>
+            {/* ✅ SUBSTITUÍDO: Botão estático por dropdown funcional */}
+            <SortDropdown options={sortOptions} />
             {role === "admin" && (
               <FormModal table="operador" type="create" userRole={UserRole.ADMIN} />
             )}

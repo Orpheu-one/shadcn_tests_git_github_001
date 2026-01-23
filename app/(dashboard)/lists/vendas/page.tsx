@@ -2,6 +2,7 @@ import FormModal from "@/components/FormModal"
 import Pagination from "@/components/Pagination"
 import Table from "@/components/Table"
 import TableSearch from "@/components/TableSearch"
+import SortDropdown from "@/components/SortDropdown" // ✅ ADICIONADO
 import { role } from "@/lib/data"
 import prisma from "@/lib/prisma" 
 import { ITEMS_PER_PAGE } from "@/lib/settings"
@@ -100,7 +101,7 @@ const renderRow = (item: EventWithRelations) => {
 
 const EventsPage = async ({ searchParams }: SearchProps) => {
   const params = await searchParams;
-  const { page, query } = params;
+  const { page, query, sort } = params; // ✅ ADICIONADO: sort
   const p = page ? parseInt(page as string, 10) : 1;
 
   // ✅ CORRIGIDO: Usa SÓ auth() e pega sessionClaims
@@ -138,27 +139,51 @@ const EventsPage = async ({ searchParams }: SearchProps) => {
   // 🔍 ADICIONADO: Search query (ID venda, nome cliente, telefone, email)
   if (query && typeof query === 'string') {
     whereClause.OR = [
-      { event_id: { contains: query } }, // 🆔 ID da venda
-      { client: { frst_name: { contains: query } } }, // 👤 Nome
-      { client: { lst_name: { contains: query } } }, // 👤 Apelido
-      { client: { phone: { contains: query } } }, // 📞 Telefone
-      { client: { email: { contains: query } } }, // 📧 Email
+      { event_id: { contains: query } },
+      { client: { frst_name: { contains: query } } },
+      { client: { lst_name: { contains: query } } },
+      { client: { phone: { contains: query } } },
+      { client: { email: { contains: query } } },
     ];
     console.log(`🔍 [VendasPage] Search query: "${query}"`);
   }
 
-  // ✅ MODIFICADO: Adicionar whereClause na query
+  // ✅ ADICIONADO: Definir ordenação baseada no sort param
+  const sortParam = (sort as string) || 'recente';
+  let orderBy: Prisma.EventOrderByWithRelationInput = { created_at: 'desc' }; // Default
+
+  switch (sortParam) {
+    case 'antiga':
+      orderBy = { created_at: 'asc' };
+      break;
+    case 'cliente-az':
+      orderBy = { client: { frst_name: 'asc' } };
+      break;
+    case 'cliente-za':
+      orderBy = { client: { frst_name: 'desc' } };
+      break;
+    case 'status':
+      orderBy = { status: 'asc' };
+      break;
+    case 'id-venda':
+      orderBy = { event_id: 'asc' };
+      break;
+    default: // 'recente'
+      orderBy = { created_at: 'desc' };
+  }
+
+  console.log(`🔄 [VendasPage] Sorting por: ${sortParam}`);
+
+  // ✅ MODIFICADO: Adicionar whereClause E orderBy na query
   const vendas = await prisma.event.findMany({
-    where: whereClause, // 🔒 Filtro aplicado aqui
+    where: whereClause,
     include: {
       user: true,
       client: true,
     },
     take: ITEMS_PER_PAGE,
     skip: (p - 1) * ITEMS_PER_PAGE,
-    orderBy: {
-      created_at: 'desc'
-    },
+    orderBy: orderBy, // ✅ ADICIONADO: Ordenação dinâmica
   });
 
   // ✅ MODIFICADO: Count também filtrado
@@ -178,6 +203,16 @@ const EventsPage = async ({ searchParams }: SearchProps) => {
     );
   }
 
+  // ✅ ATUALIZADO: Opções com ícones Lucide
+  const sortOptions = [
+    { value: 'recente', label: 'Mais recente', icon: 'calendar' },
+    { value: 'antiga', label: 'Mais antiga', icon: 'calendar' },
+    { value: 'cliente-az', label: 'Cliente A-Z', icon: 'user' },
+    { value: 'cliente-za', label: 'Cliente Z-A', icon: 'user' },
+    { value: 'status', label: 'Por Status', icon: 'target' },
+    { value: 'id-venda', label: 'Por ID Venda', icon: 'hash' },
+  ];
+
   return (
     <div className='flex-1 bg-gray-300 p-4 rounded-lg m-4 mt-0'>
       <div className="flex items-center justify-between mb-4">
@@ -196,9 +231,8 @@ const EventsPage = async ({ searchParams }: SearchProps) => {
             <button className="rounded-full bg-yellow-500 p-2 hover:bg-yellow-600 transition duration-150">
               <Image src="/filter.png" alt="" width={15} height={15} />
             </button>
-            <button className="rounded-full bg-purple-500 p-2 hover:bg-purple-600 transition duration-150">
-              <Image src="/sort.png" alt="" width={15} height={15} />
-            </button>
+            {/* ✅ SUBSTITUÍDO: Botão estático por dropdown funcional */}
+            <SortDropdown options={sortOptions} />
             {/* ✅ MODIFICADO: Todos podem criar vendas */}
             <FormModal table="vendas" type="create" />
           </div>
