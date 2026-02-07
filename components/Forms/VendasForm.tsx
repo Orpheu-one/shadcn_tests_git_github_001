@@ -82,7 +82,7 @@ const VendasForm = ({
   const [isLoadingEvent, setIsLoadingEvent] = useState(false);
   const [operators, setOperators] = useState<any[]>([]);
   const [selectedOperatorId, setSelectedOperatorId] = useState<string>('');
-  const { user: currentUser } = useUser();
+  const { user: currentUser, isLoaded } = useUser();
 
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -144,72 +144,99 @@ const VendasForm = ({
       fetchEventData();
     }
     if (type === "create" && isAdmin) {
-      getOperatorsList().then(setOperators).catch(console.error);
+      getOperatorsList().then((ops) => {
+        console.log('👥 [VendasForm] Operadores carregados:', ops.length);
+        setOperators(ops);
+      }).catch(console.error);
     }
   }, [type, eventId, setValue, isAdmin]);
 
-  // ✅ SUBSTITUI A PARTE DO onSubmit (linhas ~148-172)
+  // ✅ FUNÇÃO onSubmit CORRIGIDA
+  const onSubmit = handleSubmit(async (formData) => {
+    const tid = toast.loading(type === "create" ? "A criar..." : "A atualizar...");
+    setIsSubmitting(true);
 
-const onSubmit = handleSubmit(async (formData) => {
-  const tid = toast.loading(type === "create" ? "A criar..." : "A atualizar...");
-  setIsSubmitting(true);
+    startTransition(async () => {
+      try {
+        const rawType = typeMap[vendaStatus.tipo];
+        const rawChannel = channelMap[vendaStatus.modalidade];
+        let finalStatus = statusMap[vendaStatus.status];
 
-  startTransition(async () => {
-    try {
-      const rawType = typeMap[vendaStatus.tipo];
-      const rawChannel = channelMap[vendaStatus.modalidade];
-      let finalStatus = statusMap[vendaStatus.status];
+        if (rawType === 'CALLBACK') {
+          finalStatus = 'PROJECT';
+        }
 
-      if (rawType === 'CALLBACK') {
-        finalStatus = 'PROJECT';
+        const payload = {
+          clientData: {
+            frst_name: formData.name,
+            lst_name: formData.apelido,
+            phone: formData.phone,
+            email: formData.email || undefined,
+            address: formData.address,
+          },
+          type: rawType,
+          channel: rawChannel,
+          status: finalStatus,
+          obs: formData.obs,
+          calledback_at: rawType === 'CALLBACK' ? formData.calledback_at : null,
+        };
+
+        let result;
+        if (type === "create") {
+          // 🔧 CORRIGIDO: Valida currentUser antes de usar
+          if (!currentUser) {
+            throw new Error("Utilizador não carregado. Tente novamente.");
+          }
+
+          // ✅ Usa currentUser.id (Clerk ID) sem optional chaining
+          const opId = isAdmin && selectedOperatorId 
+            ? selectedOperatorId 
+            : currentUser.id;
+
+          console.log('🔍 [VendasForm] opId:', opId, 'isAdmin:', isAdmin);
+
+          if (!opId) {
+            throw new Error("Não autenticado - ID de utilizador não disponível");
+          }
+
+          result = await createEvent({ ...payload, clerkUserId: opId });
+        } else {
+          if (!eventId) throw new Error("ID em falta");
+          result = await updateEvent(Number(eventId), payload);
+        }
+
+        if (result?.error) throw new Error(result.error);
+        
+        toast.success("Operação concluída!", { id: tid });
+        
+        // ✅ Fecha modal
+        if (onSuccess) {
+          onSuccess();
+        }
+        
+        // ✅ Refresh para atualizar dados
+        router.refresh();
+        
+      } catch (error: any) {
+        setIsSubmitting(false);
+        toast.error(error.message || "Erro na submissão", { id: tid });
       }
-
-      const payload = {
-        clientData: {
-          frst_name: formData.name,
-          lst_name: formData.apelido,
-          phone: formData.phone,
-          email: formData.email || undefined,
-          address: formData.address,
-        },
-        type: rawType,
-        channel: rawChannel,
-        status: finalStatus,
-        obs: formData.obs,
-        calledback_at: rawType === 'CALLBACK' ? formData.calledback_at : null,
-      };
-
-      let result;
-      if (type === "create") {
-        const opId = isAdmin && selectedOperatorId ? selectedOperatorId : currentUser?.id;
-        if (!opId) throw new Error("Não autenticado");
-        result = await createEvent({ ...payload, clerkUserId: opId });
-      } else {
-        if (!eventId) throw new Error("ID em falta");
-        result = await updateEvent(Number(eventId), payload);
-      }
-
-      if (result?.error) throw new Error(result.error);
-      
-      toast.success("Operação concluída!", { id: tid });
-      
-      // ✅ ALTERAÇÃO CRÍTICA: Chama onSuccess ANTES de qualquer navegação
-      if (onSuccess) {
-        onSuccess(); // Fecha o modal
-      }
-      
-      // ✅ Refresh para atualizar os dados (servidor recarrega eventos)
-      router.refresh();
-      
-      // ❌ REMOVIDO: router.push('/lists/vendas')
-      // Porquê? Se o modal foi aberto pelo BigCalendar, queremos ficar na mesma página
-      
-    } catch (error: any) {
-      setIsSubmitting(false);
-      toast.error(error.message || "Erro na submissão", { id: tid });
-    }
+    });
   });
-});
+
+  // ✅ Loading state enquanto Clerk carrega
+  if (!isLoaded) {
+    return (
+      <div className="w-full grid grid-cols-1 gap-6 lg:grid-cols-3 relative min-h-[400px]">
+        <div className="absolute inset-0 bg-white/80 flex items-center justify-center z-50 rounded-lg">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-3" />
+            <p className="text-sm font-medium text-gray-700">A carregar...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (isSubmitting) {
     return (
@@ -240,14 +267,20 @@ const onSubmit = handleSubmit(async (formData) => {
             </div>
           )
         ) : isAdmin ? (
-          <select value={selectedOperatorId} onChange={(e) => setSelectedOperatorId(e.target.value)} className="w-full p-2 border rounded-md text-sm bg-white text-black">
+          <select 
+            value={selectedOperatorId} 
+            onChange={(e) => setSelectedOperatorId(e.target.value)} 
+            className="w-full p-2 border rounded-md text-sm bg-white text-black"
+          >
             <option value="">Selecione...</option>
             {operators.map((op) => (
               <option key={op.userId} value={op.userId}>{op.frst_name} ({op.internalId})</option>
             ))}
           </select>
         ) : (
-          <div className="p-3 bg-gray-50 rounded-md text-black"><span className="text-sm font-semibold">{currentUserName}</span></div>
+          <div className="p-3 bg-gray-50 rounded-md text-black">
+            <span className="text-sm font-semibold">{currentUserName}</span>
+          </div>
         )}
       </div>
 

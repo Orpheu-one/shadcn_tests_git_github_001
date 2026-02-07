@@ -183,4 +183,4 @@ const OperadoresPage = async ({ searchParams }: SearchProps) => {
   );
 };
 
-export default OperadoresPage;
+export default OperadoresPage; 
