@@ -205,15 +205,21 @@ const VendasForm = ({
           result = await updateEvent(Number(eventId), payload);
         }
 
-        if (result?.error) throw new Error(result.error);
-        
+       if (result?.error) throw new Error(result.error);
+
         toast.success("Operação concluída!", { id: tid });
-        
+
+        // 🔥 NOVO: Dispara evento para ListaVendas atualizar instantaneamente
+        if (type === "create") {
+          window.dispatchEvent(new Event('vendaCreated'));
+          console.log('🎉 [VendasForm] Evento vendaCreated disparado!');
+        }
+
         // ✅ Fecha modal
         if (onSuccess) {
           onSuccess();
         }
-        
+
         // ✅ Refresh para atualizar dados
         router.refresh();
         

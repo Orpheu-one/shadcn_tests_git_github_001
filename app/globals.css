@@ -1114,14 +1114,47 @@ button.rbc-input::-moz-focus-inner {
   -webkit-user-select: none;
 }
 
+/* ⏰ LINHA DO TEMPO - Estilo Google Calendar com círculo amarelo */
 .rbc-current-time-indicator {
   position: absolute;
-  z-index: 3;
+  z-index: 10;
   left: 0;
   right: 0;
-  height: 1px;
-  background-color: #74ad31;
+  height: 2px;
+  background-color: oklch(0.731 0.159 85.595); /* yellow-600 */
   pointer-events: none;
+}
+
+/* ⭕ Círculo amarelo à esquerda (estilo Google Calendar) */
+.rbc-current-time-indicator::before {
+  content: '';
+  position: absolute;
+  left: -6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 12px;
+  height: 12px;
+  background-color: oklch(0.731 0.159 85.595); /* yellow-600 */
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px white, 0 2px 4px rgba(0, 0, 0, 0.2);
+  z-index: 11;
+}
+
+/* 🌫️ Overlay para escurecer o tempo passado */
+.rbc-current-time-indicator::after {
+  content: '';
+  position: absolute;
+  top: -500vh;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    to bottom,
+    oklch(0.145 0 0 / 0.12),
+    oklch(0.145 0 0 / 0.15)
+  );
+  pointer-events: none;
+  z-index: -1;
 }
 
 .rbc-resource-grouping.rbc-time-header-content {
@@ -1223,5 +1256,34 @@ background-color:oklch(0.4162 0.2709 0) !important;
 
 }
 
+/* 🔥 ADICIONAR ISTO NO FINAL DO SEU globals.css */
 
+/* Animação para vendas novas aparecerem */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+/* Pulse suave para indicar atualização */
+@keyframes pulse-subtle {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 1s ease-in-out infinite;
+}

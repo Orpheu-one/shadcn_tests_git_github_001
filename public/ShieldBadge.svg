@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="300"
+   height="300"
+   viewBox="0 0 79.374998 79.375"
+   version="1.1"
+   id="svg5"
+   inkscape:export-filename="StarBadge.svg"
+   inkscape:export-xdpi="96"
+   inkscape:export-ydpi="96"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview7"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     showgrid="false"
+     showguides="true">
+    <sodipodi:guide
+       position="38.428647,28.273949"
+       orientation="1,0"
+       id="guide1165"
+       inkscape:locked="false" />
+  </sodipodi:namedview>
+  <defs
+     id="defs2" />
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     style="display:none">
+    <path
+       sodipodi:type="star"
+       style="opacity:0.985245;fill:#fb4b09;fill-opacity:0.997795;stroke:none;stroke-width:4.71101;stroke-linecap:round;stroke-linejoin:round;paint-order:stroke fill markers"
+       id="path234"
+       inkscape:flatsided="false"
+       sodipodi:sides="5"
+       sodipodi:cx="26.734062"
+       sodipodi:cy="20.566938"
+       sodipodi:r1="29.729267"
+       sodipodi:r2="10.83011"
+       sodipodi:arg1="0.90522789"
+       sodipodi:arg2="1.4991091"
+       inkscape:rounded="0"
+       inkscape:randomized="0"
+       d="M 45.092073,43.950966 27.509778,31.369232 10.167468,45.252506 16.70018,24.64278 -1.8626674,12.439431 19.757066,12.283654 25.626906,-9.1417056 32.455924,11.371745 54.646532,10.333494 37.247363,23.167281 Z"
+       inkscape:transform-center-x="0.34213046"
+       inkscape:transform-center-y="-2.5115382"
+       transform="translate(12.350963,18.754667)" />
+  </g>
+  <g
+     inkscape:groupmode="layer"
+     id="layer2"
+     inkscape:label="Badge_Base">
+    <path
+       id="path1056"
+       style="opacity:0.985245;fill:#fb4b09;fill-opacity:0.997795;stroke:none;stroke-width:4.71101;stroke-linecap:round;stroke-linejoin:round;paint-order:stroke fill markers"
+       d="m 38.193018,13.062252 -0.0021,0.09663 c -0.27281,12.966981 -20.07048,12.898643 -20.801282,12.891724 v 0.0041 6.458521 a 21.222996,21.002165 0 0 0 -0.07493,1.705322 21.222996,21.002165 0 0 0 0.07493,1.705322 v 0.110588 h 0.0124 a 21.222996,21.002165 0 0 0 0.04496,0.394291 c -0.0571,8.883244 9.777926,21.416463 20.889681,26.780278 v 0.176733 c 11.115758,-5.361184 20.95662,-17.899082 20.8995,-26.784928 a 21.222996,21.002165 0 0 0 0.04496,-0.394291 h 0.0124 v -0.110588 a 21.222996,21.002165 0 0 0 0.07493,-1.705322 21.222996,21.002165 0 0 0 -0.07493,-1.705323 v -6.45852 -0.0041 c -0.730802,0.0069 -20.528471,0.07526 -20.801314,-12.89172 l -0.0021,-0.09663 h -0.118856 -0.0248 v -0.172082 h -0.03462 z" />
+  </g>
+</svg>
